@@ -439,7 +439,7 @@
       var prodotti = [];
       for (var i = 0; i < rows.length; i++) {
         if (rows[i].categoria && rows[i].categoria.toLowerCase() === 'note') {
-          notaTracce = (rows[i].ingredienti || '').replace(/\r\n|\r|\n/g, '<br>');
+          notaTracce = highlightAllergens((rows[i].ingredienti || '').replace(/\r\n|\r|\n/g, '<br>'));
         } else {
           prodotti.push(rows[i]);
         }
