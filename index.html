@@ -358,7 +358,10 @@
           var key = COL_MAP[col] || col;
           obj[key] = (vals[j] || '').trim();
         }
-        if (obj.pubblicato && obj.pubblicato.toUpperCase() === 'TRUE') {
+        // la riga NOTE passa sempre, indipendentemente da PUBBLICATO
+        if (obj.categoria && obj.categoria.toLowerCase() === 'note') {
+          rows.push(obj);
+        } else if (obj.pubblicato && obj.pubblicato.toUpperCase() === 'TRUE') {
           rows.push(obj);
         }
       }
