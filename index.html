@@ -316,7 +316,7 @@
   <div class="listino-wrap">
     <p class="listino-intro">Prezzi al netto delle eventuali spese di spedizione.<br>Clicca su un prodotto per la lista ingredienti e i prezzi.</p>
     <div id="listino"><p class="loading">Caricamento in corso…</p></div>
-    <p id="nota-tracce" style="font-size:11px;color:#bbb;margin-top:2rem;padding-top:1rem;border-top:0.5px solid #efefef;line-height:1.7;display:none;"></p>
+
     </p>
   </div>
 
@@ -346,12 +346,13 @@
     };
 
     function parseCSV(text) {
-      var lines = text.trim().split('\n');
-      var headers = splitCSVLine(lines[0]);
+      // splitta rispettando i campi multiriga tra virgolette
+      var records = splitCSVRecords(text.trim());
+      var headers = splitCSVLine(records[0]);
       var rows = [];
-      for (var i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        var vals = splitCSVLine(lines[i]);
+      for (var i = 1; i < records.length; i++) {
+        if (!records[i].trim()) continue;
+        var vals = splitCSVLine(records[i]);
         var obj = {};
         for (var j = 0; j < headers.length; j++) {
           var col = headers[j].trim().toLowerCase();
@@ -366,6 +367,31 @@
         }
       }
       return rows;
+    }
+
+    function splitCSVRecords(text) {
+      // separa le righe del CSV rispettando i campi tra virgolette (che possono contenere \n)
+      var records = [];
+      var current = '';
+      var inQuotes = false;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i];
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+          current += ch;
+        } else if ((ch === '\n' || (ch === '\r' && text[i+1] === '\n')) && !inQuotes) {
+          if (ch === '\r') i++; // salta il \n dopo \r
+          records.push(current);
+          current = '';
+        } else if (ch === '\r' && !inQuotes) {
+          records.push(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      if (current) records.push(current);
+      return records;
     }
 
     function splitCSVLine(line) {
@@ -413,7 +439,7 @@
       var prodotti = [];
       for (var i = 0; i < rows.length; i++) {
         if (rows[i].categoria && rows[i].categoria.toLowerCase() === 'note') {
-          notaTracce = (rows[i].ingredienti || '').replace(/\n/g, '<br>');
+          notaTracce = (rows[i].ingredienti || '').replace(/\r\n|\r|\n/g, '<br>');
         } else {
           prodotti.push(rows[i]);
         }
@@ -462,13 +488,21 @@
         html += '</div></div>';
       }
 
+      // aggiungi la riga ALLERGENI in fondo come accordion
+      if (notaTracce) {
+        html += '<div class="prod-item">';
+        html += '<button class="prod-trigger" onclick="toggle(this)">';
+        html += '<div class="prod-left"><span class="prod-name">Allergeni</span></div>';
+        html += '<span class="prod-arrow">&#8964;</span>';
+        html += '</button>';
+        html += '<div class="prod-body">';
+        html += '<p class="prod-ingredienti">' + notaTracce + '</p>';
+        html += '</div></div>';
+      }
+
       container.innerHTML = html;
       // mostra la nota tracce dal foglio
-      var notaEl = document.getElementById('nota-tracce');
-      if (notaTracce && notaEl) {
-        notaEl.innerHTML = notaTracce;
-        notaEl.style.display = 'block';
-      }
+
     }
 
     function toggle(btn) {
