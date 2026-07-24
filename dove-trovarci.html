@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dove trovarci – Confetteria di Valle</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: #ff7700;
+    --text: #1a1a1a;
+    --muted: #888;
+    --border: #eee;
+    --bg: #fff;
+  }
+
+  body {
+    font-family: 'Raleway', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 48px 24px 24px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: normal;
+  }
+
+  header h1 span {
+    color: var(--orange);
+  }
+
+  /* ── SEARCH ── */
+  .search-wrap {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .search-input {
+    display: block;
+    width: 100%;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    text-align: center;
+    color: var(--text);
+    padding: 6px 4px 10px;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    outline: none;
+    background: transparent;
+  }
+
+  .search-input::placeholder {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .search-input:focus {
+    border-bottom-color: var(--orange);
+  }
+
+  .search-status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 16px;
+  }
+
+  /* ── SECTION ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 32px 24px 10px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* ── RESULTS ── */
+  .results {
+    list-style: none;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .store-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .results li:last-child .store-card {
+    border-bottom: none;
+  }
+
+  .store-card:active {
+    opacity: 0.6;
+  }
+
+  .card-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .card-address {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    font-weight: 400;
+    color: #555;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  .card-tag {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--orange);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 32px 24px 0;
+    text-align: center;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .empty-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .btn-secondary {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--orange);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .btn-link {
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .btn-link:hover {
+    color: var(--orange);
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hai bisogno di <span>CaraMelle?</span></h1>
+</header>
+
+<div class="search-wrap">
+  <input type="text" class="search-input" id="cityInput" placeholder="Dove ti trovi?" autocomplete="off" autofocus />
+  <div class="search-status" id="searchStatus"></div>
+</div>
+
+<div id="resultsSection"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIGURAZIONE — modifica qui se cambia il foglio o l'email di contatto
+// ─────────────────────────────────────────────
+const CONFIG = {
+  // Sostituisci con l'URL CSV del tuo Google Sheet "Negozi"
+  // Foglio → File → Condividi → "Chiunque abbia il link" → Visualizzatore
+  sheetCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-7bhxOYDFLp5ibs_Se3ksNH6n3xUrU6UXwepq9JpQMgx4oytBWDhnZOl-JY4GfSkA0Df75CnwPYWH/pub?output=csv",
+  contactEmail: "info@confetteriadivalle.it", // TODO: aggiorna con l'email vera
+  whatsappNumber: "391234567890", // TODO: numero WhatsApp vero, formato internazionale senza + o spazi (es. 393331234567)
+  whatsappMessage: "Ciao! Cerco Caramelle ma non ho trovato un punto vendita vicino a me, potete spedire?",
+  nominatimUrl: "https://nominatim.openstreetmap.org/search",
+  widenResultsCount: 5,
+  debounceMs: 600,
+  minChars: 2
+};
+
+let ALL_STORES = [];
+let storesLoaded = false;
+let lastOrigin = null;
+let debounceTimer = null;
+let searchSeq = 0; // evita che risposte lente e fuori ordine sovrascrivano una ricerca più recente
+
+const input = document.getElementById('cityInput');
+const status = document.getElementById('searchStatus');
+const resultsSection = document.getElementById('resultsSection');
+
+function normalize(str) {
+  return (str || '')
+    .toString()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function loadStores() {
+  return new Promise((resolve, reject) => {
+    Papa.parse(CONFIG.sheetCsvUrl, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => {
+        const rows = res.data
+          .map(r => ({
+            nome: (r['Nome negozio'] || '').trim(),
+            indirizzo: (r['Indirizzo'] || '').trim(),
+            citta: (r['Città'] || '').trim(),
+            provincia: (r['Provincia'] || '').trim(),
+            descrizione: (r['Descrizione'] || '').trim(),
+            lat: parseFloat(r['Lat']),
+            lng: parseFloat(r['Lng']),
+            mapsLink: (r['Link Google Maps'] || '').trim()
+          }))
+          .filter(r => r.nome && !r.nome.toUpperCase().startsWith('ESEMPIO') && !isNaN(r.lat) && !isNaN(r.lng));
+        resolve(rows);
+      },
+      error: reject
+    });
+  });
+}
+
+async function geocode(query) {
+  const url = `${CONFIG.nominatimUrl}?format=json&addressdetails=1&limit=1&countrycodes=it&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('geocode failed');
+  const data = await res.json();
+  if (!data.length) return null;
+  const item = data[0];
+  const addr = item.address || {};
+  const provincia = addr.county || addr.state_district || addr.province || null;
+  return {
+    lat: parseFloat(item.lat),
+    lng: parseFloat(item.lon),
+    provincia
+  };
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+function whatsappUrl() {
+  return `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(CONFIG.whatsappMessage)}`;
+}
+
+function storeCardHtml(store, distanceKm) {
+  const dist = distanceKm !== null ? `${distanceKm < 1 ? Math.round(distanceKm * 1000) + ' m' : distanceKm.toFixed(1).replace('.', ',') + ' km'}` : '';
+  const href = store.mapsLink || `https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`;
+  return `
+    <li>
+      <a class="store-card" href="${href}" target="_blank" rel="noopener">
+        <div class="card-body">
+          <div class="card-name">${escapeHtml(store.nome)}</div>
+          <div class="card-address">${escapeHtml(store.indirizzo)}${store.citta ? ', ' + escapeHtml(store.citta) : ''}</div>
+          ${store.descrizione ? `<div class="card-desc">${escapeHtml(store.descrizione)}</div>` : ''}
+        </div>
+        ${dist ? `<span class="card-tag">${dist}</span>` : ''}
+      </a>
+    </li>
+  `;
+}
+
+function renderResults(stores, originLat, originLng, label) {
+  const withDistance = stores.map(s => ({
+    ...s,
+    _dist: haversineKm(originLat, originLng, s.lat, s.lng)
+  })).sort((a, b) => a._dist - b._dist);
+
+  resultsSection.innerHTML = `
+    <div class="section-label">${label}</div>
+    <ul class="results">
+      ${withDistance.map(s => storeCardHtml(s, s._dist)).join('')}
+    </ul>
+  `;
+}
+
+function renderEmptyState(cityLabel) {
+  resultsSection.innerHTML = `
+    <div class="empty-state">
+      <p>Non abbiamo ancora un punto vendita vicino a <strong>${escapeHtml(cityLabel)}</strong>.</p>
+      <div class="empty-actions">
+        <button class="btn-secondary" id="widenBtn">Allarga la ricerca</button>
+        <a class="btn-link" href="${whatsappUrl()}" target="_blank" rel="noopener">Scrivici, facciamo spedizioni</a>
+      </div>
+    </div>
+  `;
+  const widenBtn = document.getElementById('widenBtn');
+  if (widenBtn) {
+    widenBtn.addEventListener('click', () => {
+      if (!lastOrigin) return;
+      const nearest = [...ALL_STORES]
+        .map(s => ({ ...s, _dist: haversineKm(lastOrigin.lat, lastOrigin.lng, s.lat, s.lng) }))
+        .sort((a, b) => a._dist - b._dist)
+        .slice(0, CONFIG.widenResultsCount);
+      resultsSection.innerHTML = `
+        <div class="section-label">I negozi più vicini a te</div>
+        <ul class="results">
+          ${nearest.map(s => storeCardHtml(s, s._dist)).join('')}
+        </ul>
+      `;
+    });
+  }
+}
+
+function capitalize(str) {
+  const s = (str || '').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+function renderError(cityLabel) {
+  resultsSection.innerHTML = `
+    <div class="empty-state">
+      <p>A ${escapeHtml(capitalize(cityLabel))} non ci siamo ancora arrivati!<br><a class="btn-link" href="${whatsappUrl()}" target="_blank" rel="noopener">Scrivici però che possiamo spedire</a></p>
+    </div>
+  `;
+}
+
+async function runSearch(city) {
+  const seq = ++searchSeq;
+  status.textContent = 'Cerco…';
+
+  try {
+    if (!storesLoaded) {
+      ALL_STORES = await loadStores();
+      storesLoaded = true;
+    }
+
+    const geo = await geocode(city + ', Italia');
+    if (seq !== searchSeq) return; // l'utente ha già digitato altro
+
+    if (!geo) {
+      status.textContent = '';
+      renderEmptyState(city);
+      return;
+    }
+    lastOrigin = { lat: geo.lat, lng: geo.lng };
+
+    let matches = ALL_STORES;
+    if (geo.provincia) {
+      matches = ALL_STORES.filter(s => normalize(s.provincia) === normalize(geo.provincia));
+    }
+
+    status.textContent = '';
+
+    if (!matches.length) {
+      renderEmptyState(city);
+    } else {
+      renderResults(matches, geo.lat, geo.lng, `Negozi in provincia di ${geo.provincia || city}`);
+    }
+  } catch (err) {
+    if (seq !== searchSeq) return;
+    console.error(err);
+    status.textContent = '';
+    renderError(city);
+  }
+}
+
+input.addEventListener('input', () => {
+  const city = input.value.trim();
+  clearTimeout(debounceTimer);
+
+  if (city.length < CONFIG.minChars) {
+    searchSeq++; // invalida eventuali richieste in corso
+    status.textContent = '';
+    resultsSection.innerHTML = '';
+    return;
+  }
+
+  status.textContent = '';
+  debounceTimer = setTimeout(() => runSearch(city), CONFIG.debounceMs);
+});
+</script>
+
+</body>
+</html>
