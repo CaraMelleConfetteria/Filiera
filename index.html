@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Filiera & Listino – Confetteria di Valle</title>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+ 
     :root {
       --orange: #ff7700;
       --text: #1a1a1a;
@@ -15,7 +16,7 @@
       --border: #e8e8e8;
       --bg: #fff;
     }
-
+ 
     body {
       font-family: 'Raleway', sans-serif;
       background: var(--bg);
@@ -28,23 +29,23 @@
       padding-top: 4vh;
       align-items: center;
     }
-
+ 
     @media (min-width: 600px) {
       body { padding-top: 10vh; }
     }
-
+ 
     /* ── HEADER ── */
     header {
       padding: 32px 24px 24px;
       text-align: center;
     }
-
+ 
     .brand-logo {
       margin-bottom: 8px;
       display: flex;
       justify-content: center;
     }
-
+ 
     header p {
       margin-top: 9px;
       font-size: 14px;
@@ -55,14 +56,14 @@
       margin-left: auto;
       margin-right: auto;
     }
-
+ 
     header p .first-line {
       display: block;
       font-weight: 300;
       font-style: italic;
       margin-bottom: 10px;
     }
-
+ 
     /* ── SECTION LABEL ── */
     .section-label {
       font-size: 11px;
@@ -74,7 +75,7 @@
       max-width: 560px;
       width: 100%;
     }
-
+ 
     /* ── FORNITORE CARD ── */
     .suppliers {
       list-style: none;
@@ -86,7 +87,7 @@
       flex-direction: column;
       gap: 12px;
     }
-
+ 
     .supplier-card {
       display: flex;
       align-items: center;
@@ -99,43 +100,43 @@
       transition: border-color 0.2s, transform 0.15s;
       background: #fff;
     }
-
+ 
     .supplier-card:hover { border-color: var(--orange); transform: translateY(-1px); }
     .supplier-card:active { transform: translateY(0); }
-
+ 
     .card-body { flex: 1; min-width: 0; }
-
+ 
     .card-name {
       font-size: 15px; font-weight: 700; color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-
+ 
     .card-product {
       font-size: 13px; font-weight: 400; color: var(--muted);
       margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-
+ 
     .card-tag {
       font-size: 11px; font-weight: 600;
       background: #fff3e6; color: var(--orange);
       border-radius: 20px; padding: 3px 10px;
       white-space: nowrap; flex-shrink: 0;
     }
-
+ 
     .card-arrow {
       font-size: 18px; color: #ccc; flex-shrink: 0;
       margin-left: 4px; transition: color 0.2s;
     }
-
+ 
     .supplier-card:hover .card-arrow { color: var(--orange); }
-
+ 
     /* ── LISTINO ── */
     .listino-wrap {
       max-width: 560px;
       width: 100%;
       padding: 0 16px;
     }
-
+ 
     .listino-intro {
       text-align: center;
       font-size: 13px;
@@ -144,7 +145,7 @@
       margin-bottom: 16px;
       font-weight: 400;
     }
-
+ 
     .listino-title {
       font-size: 18px;
       font-weight: 700;
@@ -153,81 +154,183 @@
       margin: 40px 0 10px;
       letter-spacing: -0.01em;
     }
-
+ 
     .lc-cat {
       font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
       text-transform: uppercase; color: #bbb;
       margin: 24px 0 4px; padding-bottom: 6px;
       border-bottom: 0.5px solid #efefef;
     }
-
+ 
     .prod-item { border-bottom: 0.5px solid #f0f0f0; }
-
+ 
     .prod-trigger {
       display: flex; align-items: center; justify-content: space-between;
       padding: 13px 2px; cursor: pointer; user-select: none; gap: 12px;
       background: none; border: none; width: 100%; text-align: left;
       font-family: 'Raleway', sans-serif;
     }
-
+ 
     .prod-trigger:hover .prod-name { color: var(--orange); }
-
+ 
     .prod-left { display: flex; flex-direction: column; gap: 2px; }
-
+ 
     .prod-name {
       font-size: 15px; font-weight: 600; color: var(--text); transition: color 0.15s;
     }
-
+ 
     .prod-tagline { font-size: 12px; color: var(--muted); font-weight: 400; }
-
+ 
     .prod-arrow {
       font-size: 18px; color: #ccc; transition: transform 0.22s;
       flex-shrink: 0; line-height: 1;
     }
-
+ 
     .prod-arrow.open { transform: rotate(180deg); }
-
+ 
     .prod-body { display: none; padding: 0 2px 16px; }
     .prod-body.open { display: block; }
-
+ 
     .prod-ingredienti {
       font-size: 12px; color: #777; line-height: 1.65;
       margin: 0 0 10px; padding: 10px 14px;
       background: #fafafa; border-radius: 10px;
       font-weight: 400;
     }
-
+ 
     .scheda-link {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 12px; color: var(--orange); font-weight: 600;
       text-decoration: none; margin-bottom: 14px;
       font-family: 'Raleway', sans-serif;
     }
-
+ 
     .scheda-link:hover { text-decoration: underline; }
     .scheda-link svg { width: 13px; height: 13px; flex-shrink: 0; }
-
+ 
     .prezzi-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-
+ 
     .prezzi-table th {
       text-align: center; font-weight: 600; font-size: 11px; color: var(--muted);
       padding: 6px 6px; border-bottom: 0.5px solid #efefef;
       font-family: 'Raleway', sans-serif;
     }
-
+ 
     .prezzi-table td {
       text-align: center; padding: 10px 6px;
       color: var(--text); font-size: 13px; font-weight: 400;
     }
-
+ 
     .th-sub {
       font-size: 9px; color: #bbb; font-weight: 400;
       display: block; margin-top: 1px;
     }
-
+ 
     .loading { text-align: center; padding: 2rem; color: #bbb; font-size: 13px; }
     .error { text-align: center; padding: 2rem; color: #c0392b; font-size: 12px; }
-
+ 
+    /* ── DOVE TROVARCI ── */
+    .store-finder-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      margin: 40px 0 10px;
+      letter-spacing: -0.01em;
+    }
+ 
+    .store-finder-title span { color: var(--orange); }
+ 
+    .search-input {
+      display: block;
+      width: 200px;
+      max-width: 100%;
+      margin: 0 auto;
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      text-align: center;
+      color: var(--text);
+      padding: 6px 4px 10px;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      outline: none;
+      background: transparent;
+    }
+ 
+    .search-input::placeholder { color: var(--muted); font-weight: 400; }
+    .search-input:focus { border-bottom-color: var(--orange); }
+ 
+    .search-status {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      min-height: 16px;
+    }
+ 
+    .store-results {
+      list-style: none;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+ 
+    .store-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: inherit;
+    }
+ 
+    .store-results li:last-child .store-card { border-bottom: none; }
+    .store-card:active { opacity: 0.6; }
+ 
+    .store-card-body { flex: 1; min-width: 0; }
+    .store-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .store-card-address { font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+    .store-card-desc { font-size: 13px; font-weight: 400; color: #555; margin-top: 6px; line-height: 1.4; }
+    .store-card-tag { font-size: 12px; font-weight: 700; color: var(--orange); white-space: nowrap; flex-shrink: 0; }
+ 
+    .store-empty {
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 32px 24px 0;
+      text-align: center;
+    }
+ 
+    .store-empty p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+ 
+    .store-empty-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+    }
+ 
+    .btn-secondary {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--orange);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+ 
+    .store-link {
+      font-size: 13px;
+      color: var(--orange);
+      text-decoration: none;
+      font-weight: 600;
+    }
+ 
+    .store-link:hover { color: var(--text); }
+ 
     /* ── FOOTER ── */
     footer {
       margin-top: 48px;
@@ -237,12 +340,13 @@
       color: #bbb;
       font-weight: 400;
     }
-
+ 
     footer a { color: var(--orange); text-decoration: none; }
+    footer a:hover { color: var(--text); }
   </style>
 </head>
 <body>
-
+ 
   <header>
     <div class="brand-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 197.93 92.91" style="width:240px;height:auto;">
@@ -256,7 +360,7 @@
       Qui trovi le realtà dalle quali arrivano le mie materie prime,<br>perchè senza di loro sarebbe tutto più difficile.
     </p>
   </header>
-
+ 
   <!-- FORNITORI -->
   <ul class="suppliers">
     <li>
@@ -310,34 +414,42 @@
       </a>
     </li>
   </ul>
-
+ 
   <!-- LISTINO -->
   <div class="listino-title">Listino prodotti 2026</div>
   <div class="listino-wrap">
     <p class="listino-intro">Prezzi al netto delle eventuali spese di spedizione.<br>Clicca su un prodotto per la lista ingredienti e i prezzi.</p>
     <div id="listino"><p class="loading">Caricamento in corso…</p></div>
-
+ 
     </p>
   </div>
-
+ 
   <div class="listino-wrap" style="margin-top: 2rem;">
     <p style="font-size:13px; color:#1a1a1a; line-height:1.7; text-align:center;">
       Se sei interessato ad avere CaraMelle nel tuo negozio<br>
-      <a href="https://wa.me/393339386382?text=Ciao%2C%20sono%20interessato%20ad%20avere%20CaraMelle%20nel%20mio%20negozio" target="_blank" style="color:#ff7700; font-weight:600; text-decoration:none;">scrivimi</a>
-      per il listino dedicato. 
+      <a href="https://wa.me/393339386382?text=Ciao%2C%20sono%20interessato%20ad%20avere%20CaraMelle%20nel%20mio%20negozio" target="_blank" class="store-link">scrivimi</a>
+      per il listino dedicato.
     </p>
   </div>
-
+ 
+  <!-- DOVE TROVARCI -->
+  <div class="listino-wrap" style="margin-top: 48px;">
+    <div class="store-finder-title">Hai bisogno di <span>CaraMelle?</span></div>
+    <input type="text" class="search-input" id="cityInput" placeholder="Dove ti trovi?" autocomplete="off" />
+    <div class="search-status" id="searchStatus"></div>
+  </div>
+  <div id="resultsSection"></div>
+ 
   <footer>
     CaraMelle – confetteria di valle / Frassino (CN)<br>
     P.IVA: 01614180626 · SDI KRRH6B9 · <a href="https://www.confetteriadivalle.it">www.confetteriadivalle.it</a>
   </footer>
-
+ 
   <script>
     var SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTjk6-jLHIRRtuQl_SuPKvrW0LlVfb2y_IYTgTTlazrC6x7blgp7Yy3oGMzxN5cQ4HBwT9dkzuJTnuj/pub?gid=2131769219&single=true&output=csv';
-
+ 
     var ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
-
+ 
     var COL_MAP = {
       'categoria': 'categoria',
       'nome': 'nome',
@@ -352,7 +464,7 @@
       'sfuso_sopra_kg': 'sfuso_sopra_prezzo',
       'pubblicato': 'pubblicato'
     };
-
+ 
     function parseCSV(text) {
       // splitta rispettando i campi multiriga tra virgolette
       var records = splitCSVRecords(text.trim());
@@ -376,7 +488,7 @@
       }
       return rows;
     }
-
+ 
     function splitCSVRecords(text) {
       // separa le righe del CSV rispettando i campi tra virgolette (che possono contenere \n)
       var records = [];
@@ -401,7 +513,7 @@
       if (current) records.push(current);
       return records;
     }
-
+ 
     function splitCSVLine(line) {
       var result = [], current = '', inQuotes = false;
       for (var i = 0; i < line.length; i++) {
@@ -413,7 +525,7 @@
       result.push(current);
       return result;
     }
-
+ 
     function formatPrezzo(prezzo, grammi) {
       if (!prezzo) return '/';
       var p = parseFloat(prezzo.replace(',', '.'));
@@ -422,25 +534,25 @@
       if (grammi) str += '/' + grammi + ' g';
       return str;
     }
-
+ 
     function formatPrezzoKg(prezzo) {
       if (!prezzo) return '/';
       var p = parseFloat(prezzo.replace(',', '.'));
       if (isNaN(p)) return '/';
       return p.toFixed(0) + ' €/kg';
     }
-
+ 
     function formatPrezzoEtto(prezzo) {
       if (!prezzo) return '/';
       var p = parseFloat(prezzo.replace(',', '.'));
       if (isNaN(p)) return '/';
       return p.toFixed(2).replace('.', ',') + ' €/etto';
     }
-
+ 
     function highlightAllergens(text) {
       return text.replace(/\b([A-ZÀÈÉÌÒÙÜ]{2,})\b/g, '<strong>$1</strong>');
     }
-
+ 
     function buildListino(rows) {
       // estrai la riga "note" se presente
       var notaTracce = '';
@@ -453,30 +565,30 @@
         }
       }
       rows = prodotti;
-
+ 
       var container = document.getElementById('listino');
       var html = '';
       var currentCat = '';
-
+ 
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
         if (r.categoria !== currentCat) {
           currentCat = r.categoria;
           html += '<div class="lc-cat">' + currentCat + '</div>';
         }
-
+ 
         var assaggino = formatPrezzo(r.assaggino_prezzo, r.assaggino_grammi);
         var sfusoSotto = formatPrezzoEtto(r.sfuso_sotto_prezzo);
         var sfusoSopra = formatPrezzoKg(r.sfuso_sopra_prezzo);
         var confezione = formatPrezzo(r.confezione_prezzo, r.confezione_grammi);
         var ingredienti = highlightAllergens(r.ingredienti || '');
-
+ 
         var schedaUrl = r.url_scheda || '';
         var schedaValida = schedaUrl && schedaUrl !== 'URL_SCHEDA_TECNICA' && schedaUrl.indexOf('http') === 0;
         var schedaHtml = schedaValida
           ? '<a href="' + schedaUrl + '" class="scheda-link">' + ICON_SVG + ' Schede tecniche ingredienti</a>'
           : '<span class="scheda-link" style="color:#ddd;cursor:default;">' + ICON_SVG + ' Schede tecniche ingredienti</span>';
-
+ 
         html += '<div class="prod-item">';
         html += '<button class="prod-trigger" onclick="toggle(this)">';
         html += '<div class="prod-left"><span class="prod-name">' + r.nome + '</span><span class="prod-tagline">' + (r.descrizione || '') + '</span></div>';
@@ -495,7 +607,7 @@
         html += '</tr></tbody></table>';
         html += '</div></div>';
       }
-
+ 
       // aggiungi la riga ALLERGENI in fondo come accordion
       if (notaTracce) {
         html += '<div class="prod-item">';
@@ -507,12 +619,12 @@
         html += '<p class="prod-ingredienti">' + notaTracce + '</p>';
         html += '</div></div>';
       }
-
+ 
       container.innerHTML = html;
       // mostra la nota tracce dal foglio
-
+ 
     }
-
+ 
     function toggle(btn) {
       var arrow = btn.querySelector('.prod-arrow');
       var body = btn.nextElementSibling;
@@ -520,7 +632,7 @@
       body.classList.toggle('open', !isOpen);
       arrow.classList.toggle('open', !isOpen);
     }
-
+ 
     fetch(SHEET_CSV_URL)
       .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
       .then(function(text) { buildListino(parseCSV(text)); })
@@ -529,6 +641,230 @@
           '<p class="error">Impossibile caricare i dati.<br><small>' + err.message + '</small></p>';
       });
   </script>
-
+ 
+  <script>
+    // ─────────────────────────────────────────────
+    // DOVE TROVARCI — configurazione
+    // ─────────────────────────────────────────────
+    var STORE_CONFIG = {
+      sheetCsvUrl: "https://docs.google.com/spreadsheets/d/177aQiUIjBnkRP2xQ-PXosnhq-38mvlOlIpkjArsFU2c/gviz/tq?tqx=out:csv",
+      whatsappNumber: "393339386382",
+      whatsappMessage: "Ciao! Cerco Caramelle ma non ho trovato un punto vendita vicino a me, potete spedire?",
+      nominatimUrl: "https://nominatim.openstreetmap.org/search",
+      widenResultsCount: 5,
+      debounceMs: 600,
+      minChars: 2
+    };
+ 
+    var ALL_STORES = [];
+    var storesLoaded = false;
+    var lastOrigin = null;
+    var debounceTimer = null;
+    var searchSeq = 0;
+ 
+    var cityInput = document.getElementById('cityInput');
+    var searchStatus = document.getElementById('searchStatus');
+    var resultsSection = document.getElementById('resultsSection');
+ 
+    function storeNormalize(str) {
+      return (str || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .trim()
+        .toLowerCase();
+    }
+ 
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      var R = 6371;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLon = (lon2 - lon1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+ 
+    function loadStores() {
+      return new Promise(function(resolve, reject) {
+        Papa.parse(STORE_CONFIG.sheetCsvUrl, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: function(res) {
+            var rows = res.data
+              .map(function(r) {
+                return {
+                  nome: (r['Nome negozio'] || '').trim(),
+                  indirizzo: (r['Indirizzo'] || '').trim(),
+                  citta: (r['Città'] || '').trim(),
+                  provincia: (r['Provincia'] || '').trim(),
+                  descrizione: (r['Descrizione'] || '').trim(),
+                  lat: parseFloat(r['Lat']),
+                  lng: parseFloat(r['Lng']),
+                  mapsLink: (r['Link Google Maps'] || '').trim()
+                };
+              })
+              .filter(function(r) {
+                return r.nome && r.nome.toUpperCase().indexOf('ESEMPIO') !== 0 && !isNaN(r.lat) && !isNaN(r.lng);
+              });
+            resolve(rows);
+          },
+          error: reject
+        });
+      });
+    }
+ 
+    function storeGeocode(query) {
+      var url = STORE_CONFIG.nominatimUrl + '?format=json&addressdetails=1&limit=1&countrycodes=it&q=' + encodeURIComponent(query);
+      return fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(function(res) {
+          if (!res.ok) throw new Error('geocode failed');
+          return res.json();
+        })
+        .then(function(data) {
+          if (!data.length) return null;
+          var item = data[0];
+          var addr = item.address || {};
+          var provincia = addr.county || addr.state_district || addr.province || null;
+          return {
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            provincia: provincia
+          };
+        });
+    }
+ 
+    function storeEscapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+ 
+    function storeCapitalize(str) {
+      var s = (str || '').trim();
+      return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    }
+ 
+    function storeWhatsappUrl() {
+      return 'https://wa.me/' + STORE_CONFIG.whatsappNumber + '?text=' + encodeURIComponent(STORE_CONFIG.whatsappMessage);
+    }
+ 
+    function storeCardHtml(store, distanceKm) {
+      var dist = distanceKm !== null ? (distanceKm < 1 ? Math.round(distanceKm * 1000) + ' m' : distanceKm.toFixed(1).replace('.', ',') + ' km') : '';
+      var href = store.mapsLink || ('https://www.google.com/maps/search/?api=1&query=' + store.lat + ',' + store.lng);
+      return '' +
+        '<li>' +
+          '<a class="store-card" href="' + href + '" target="_blank" rel="noopener">' +
+            '<div class="store-card-body">' +
+              '<div class="store-card-name">' + storeEscapeHtml(store.nome) + '</div>' +
+              '<div class="store-card-address">' + storeEscapeHtml(store.indirizzo) + (store.citta ? ', ' + storeEscapeHtml(store.citta) : '') + '</div>' +
+              (store.descrizione ? '<div class="store-card-desc">' + storeEscapeHtml(store.descrizione) + '</div>' : '') +
+            '</div>' +
+            (dist ? '<span class="store-card-tag">' + dist + '</span>' : '') +
+          '</a>' +
+        '</li>';
+    }
+ 
+    function renderStoreResults(stores, originLat, originLng, label) {
+      var withDistance = stores.map(function(s) {
+        return Object.assign({}, s, { _dist: haversineKm(originLat, originLng, s.lat, s.lng) });
+      }).sort(function(a, b) { return a._dist - b._dist; });
+ 
+      resultsSection.innerHTML =
+        '<div class="section-label">' + label + '</div>' +
+        '<ul class="store-results">' + withDistance.map(function(s) { return storeCardHtml(s, s._dist); }).join('') + '</ul>';
+    }
+ 
+    function renderStoreEmptyState(cityLabel) {
+      resultsSection.innerHTML =
+        '<div class="store-empty">' +
+          '<p>Non abbiamo ancora un punto vendita vicino a <strong>' + storeEscapeHtml(cityLabel) + '</strong>.</p>' +
+          '<div class="store-empty-actions">' +
+            '<button class="btn-secondary" id="widenBtn">Allarga la ricerca</button>' +
+            '<a class="store-link" href="' + storeWhatsappUrl() + '" target="_blank" rel="noopener">Scrivimi, facciamo spedizioni</a>' +
+          '</div>' +
+        '</div>';
+ 
+      var widenBtn = document.getElementById('widenBtn');
+      if (widenBtn) {
+        widenBtn.addEventListener('click', function() {
+          if (!lastOrigin) return;
+          var nearest = ALL_STORES
+            .map(function(s) { return Object.assign({}, s, { _dist: haversineKm(lastOrigin.lat, lastOrigin.lng, s.lat, s.lng) }); })
+            .sort(function(a, b) { return a._dist - b._dist; })
+            .slice(0, STORE_CONFIG.widenResultsCount);
+          resultsSection.innerHTML =
+            '<div class="section-label">I negozi più vicini a te</div>' +
+            '<ul class="store-results">' + nearest.map(function(s) { return storeCardHtml(s, s._dist); }).join('') + '</ul>';
+        });
+      }
+    }
+ 
+    function renderStoreError(cityLabel) {
+      resultsSection.innerHTML =
+        '<div class="store-empty">' +
+          '<p>A ' + storeEscapeHtml(storeCapitalize(cityLabel)) + ' non ci siamo ancora arrivati!<br>' +
+          '<a class="store-link" href="' + storeWhatsappUrl() + '" target="_blank" rel="noopener">Scrivimi però che possiamo spedire</a></p>' +
+        '</div>';
+    }
+ 
+    function runStoreSearch(city) {
+      var seq = ++searchSeq;
+      searchStatus.textContent = 'Cerco…';
+ 
+      (storesLoaded ? Promise.resolve(ALL_STORES) : loadStores())
+        .then(function(stores) {
+          ALL_STORES = stores;
+          storesLoaded = true;
+          return storeGeocode(city + ', Italia');
+        })
+        .then(function(geo) {
+          if (seq !== searchSeq) return;
+ 
+          if (!geo) {
+            searchStatus.textContent = '';
+            renderStoreEmptyState(city);
+            return;
+          }
+          lastOrigin = { lat: geo.lat, lng: geo.lng };
+ 
+          var matches = ALL_STORES;
+          if (geo.provincia) {
+            matches = ALL_STORES.filter(function(s) { return storeNormalize(s.provincia) === storeNormalize(geo.provincia); });
+          }
+ 
+          searchStatus.textContent = '';
+ 
+          if (!matches.length) {
+            renderStoreEmptyState(city);
+          } else {
+            renderStoreResults(matches, geo.lat, geo.lng, 'Negozi in provincia di ' + (geo.provincia || city));
+          }
+        })
+        .catch(function(err) {
+          if (seq !== searchSeq) return;
+          console.error(err);
+          searchStatus.textContent = '';
+          renderStoreError(city);
+        });
+    }
+ 
+    cityInput.addEventListener('input', function() {
+      var city = cityInput.value.trim();
+      clearTimeout(debounceTimer);
+ 
+      if (city.length < STORE_CONFIG.minChars) {
+        searchSeq++;
+        searchStatus.textContent = '';
+        resultsSection.innerHTML = '';
+        return;
+      }
+ 
+      searchStatus.textContent = '';
+      debounceTimer = setTimeout(function() { runStoreSearch(city); }, STORE_CONFIG.debounceMs);
+    });
+  </script>
+ 
 </body>
 </html>
