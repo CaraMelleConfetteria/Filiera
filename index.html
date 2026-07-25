@@ -304,24 +304,6 @@
 
     .store-empty p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
 
-    .store-empty-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      align-items: center;
-    }
-
-    .btn-secondary {
-      font-family: 'Raleway', sans-serif;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--orange);
-      background: none;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-    }
-
     .store-link {
       font-size: 13px;
       color: var(--orange);
@@ -651,7 +633,6 @@
       whatsappNumber: "393339386382",
       whatsappMessage: "Ciao! Cerco Caramelle ma non ho trovato un punto vendita vicino a me, potete spedire?",
       nominatimUrl: "https://nominatim.openstreetmap.org/search",
-      widenResultsCount: 5,
       debounceMs: 600,
       minChars: 2
     };
@@ -715,8 +696,8 @@
       });
     }
 
-    function storeGeocode(query) {
-      var url = STORE_CONFIG.nominatimUrl + '?format=json&addressdetails=1&limit=1&countrycodes=it&q=' + encodeURIComponent(query);
+    function storeGeocode(query, cityLabel) {
+      var url = STORE_CONFIG.nominatimUrl + '?format=json&addressdetails=1&limit=1&countrycodes=it&featureType=settlement&q=' + encodeURIComponent(query);
       return fetch(url, { headers: { 'Accept': 'application/json' } })
         .then(function(res) {
           if (!res.ok) throw new Error('geocode failed');
@@ -726,6 +707,19 @@
           if (!data.length) return null;
           var item = data[0];
           var addr = item.address || {};
+
+          // Verifica che il comune trovato corrisponda davvero a quello cercato:
+          // senza questo controllo, città non italiane (es. Berlino) vengono
+          // agganciate a un match fuzzy qualsiasi entro i confini italiani.
+          var target = storeNormalize(cityLabel);
+          var candidates = [addr.city, addr.town, addr.village, addr.hamlet, addr.municipality, addr.county];
+          var nameMatches = candidates.some(function(c) {
+            if (!c) return false;
+            var n = storeNormalize(c);
+            return n === target || n.indexOf(target) !== -1 || target.indexOf(n) !== -1;
+          });
+          if (!nameMatches) return null;
+
           var provincia = addr.county || addr.state_district || addr.province || null;
           return {
             lat: parseFloat(item.lat),
@@ -776,31 +770,6 @@
         '<ul class="store-results">' + withDistance.map(function(s) { return storeCardHtml(s, s._dist); }).join('') + '</ul>';
     }
 
-    function renderStoreEmptyState(cityLabel) {
-      resultsSection.innerHTML =
-        '<div class="store-empty">' +
-          '<p>Non abbiamo ancora un punto vendita vicino a <strong>' + storeEscapeHtml(cityLabel) + '</strong>.</p>' +
-          '<div class="store-empty-actions">' +
-            '<button class="btn-secondary" id="widenBtn">Allarga la ricerca</button>' +
-            '<a class="store-link" href="' + storeWhatsappUrl() + '" target="_blank" rel="noopener">Scrivimi, facciamo spedizioni</a>' +
-          '</div>' +
-        '</div>';
-
-      var widenBtn = document.getElementById('widenBtn');
-      if (widenBtn) {
-        widenBtn.addEventListener('click', function() {
-          if (!lastOrigin) return;
-          var nearest = ALL_STORES
-            .map(function(s) { return Object.assign({}, s, { _dist: haversineKm(lastOrigin.lat, lastOrigin.lng, s.lat, s.lng) }); })
-            .sort(function(a, b) { return a._dist - b._dist; })
-            .slice(0, STORE_CONFIG.widenResultsCount);
-          resultsSection.innerHTML =
-            '<div class="section-label">I negozi più vicini a te</div>' +
-            '<ul class="store-results">' + nearest.map(function(s) { return storeCardHtml(s, s._dist); }).join('') + '</ul>';
-        });
-      }
-    }
-
     function renderStoreError(cityLabel) {
       resultsSection.innerHTML =
         '<div class="store-empty">' +
@@ -817,14 +786,14 @@
         .then(function(stores) {
           ALL_STORES = stores;
           storesLoaded = true;
-          return storeGeocode(city + ', Italia');
+          return storeGeocode(city + ', Italia', city);
         })
         .then(function(geo) {
           if (seq !== searchSeq) return;
 
           if (!geo) {
             searchStatus.textContent = '';
-            renderStoreEmptyState(city);
+            renderStoreError(city);
             return;
           }
           lastOrigin = { lat: geo.lat, lng: geo.lng };
@@ -837,7 +806,7 @@
           searchStatus.textContent = '';
 
           if (!matches.length) {
-            renderStoreEmptyState(city);
+            renderStoreError(city);
           } else {
             renderStoreResults(matches, geo.lat, geo.lng, 'Negozi in provincia di ' + (geo.provincia || city));
           }
