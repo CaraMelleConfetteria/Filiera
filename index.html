@@ -679,10 +679,29 @@
         '<div class="section-label">' + label + '</div>' +
         '<ul class="store-results">' + withDistance.map(function(s) { return storeCardHtml(s, s._dist); }).join('') + '</ul>';
     }
-    function renderStoreError(cityLabel) {
+    function findNearestStore(originLat, originLng) {
+      var nearest = null;
+      var nearestDist = Infinity;
+      ALL_STORES.forEach(function(s) {
+        var d = haversineKm(originLat, originLng, s.lat, s.lng);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = s;
+        }
+      });
+      if (!nearest) return null;
+      return { store: nearest, dist: nearestDist };
+    }
+
+    function renderStoreError(cityLabel, nearest) {
+      var nearestHtml = nearest
+        ? ('Il negozio più vicino è ' + storeEscapeHtml(nearest.store.nome) +
+           (nearest.store.citta ? ', a ' + storeEscapeHtml(nearest.store.citta) : '') + '.<br>')
+        : '';
       resultsSection.innerHTML =
         '<div class="store-empty">' +
           '<p>A ' + storeEscapeHtml(storeCapitalize(cityLabel)) + ' non ci siamo ancora arrivati!<br>' +
+          nearestHtml +
           '<a class="store-link" href="' + storeWhatsappUrl() + '" target="_blank" rel="noopener">Scrivimi però che possiamo spedire</a></p>' +
         '</div>';
     }
@@ -707,9 +726,21 @@
           if (geo.provincia) {
             matches = ALL_STORES.filter(function(s) { return storeNormalize(s.provincia) === storeNormalize(geo.provincia); });
           }
+
+          // Il comune cercato deve avere un negozio esatto al suo interno:
+          // se non c'è, mostriamo sempre il messaggio "non ci siamo ancora arrivati",
+          // anche se la provincia ha altri punti vendita.
+          var normCity = storeNormalize(city);
+          var hasExactCity = matches.some(function(s) { return storeNormalize(s.citta) === normCity; });
+
           searchStatus.textContent = '';
-          if (!matches.length) {
-            renderStoreError(city);
+          if (!matches.length || !hasExactCity) {
+            var nearestInfo = findNearestStore(geo.lat, geo.lng);
+            if (nearestInfo && nearestInfo.dist <= 30) {
+              renderStoreError(city, nearestInfo);
+            } else {
+              renderStoreError(city);
+            }
           } else {
             renderStoreResults(matches, geo.lat, geo.lng, 'Negozi in provincia di ' + (geo.provincia || city), city);
           }
