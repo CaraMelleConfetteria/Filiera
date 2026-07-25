@@ -241,6 +241,18 @@
       color: inherit;
     }
     .store-results li:last-child .store-card { border-bottom: none; }
+    .store-distant-label {
+      list-style: none;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--orange);
+      padding: 14px 0 6px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .store-distant-label:hover { color: var(--text); }
     .store-card:active { opacity: 0.6; }
     .store-card-body { flex: 1; min-width: 0; }
     .store-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
@@ -569,6 +581,10 @@
     var ALL_STORES = [];
     var storesLoaded = false;
     var lastOrigin = null;
+    var resultsLabel = '';
+    var resultsSameCityHtml = '';
+    var resultsDistantQueue = [];
+    var resultsDistantIndex = 0;
     var debounceTimer = null;
     var searchSeq = 0;
     var cityInput = document.getElementById('cityInput');
@@ -682,14 +698,34 @@
       var withDistance = stores.map(function(s) {
         var sameCity = target && storeNormalize(s.citta) === target;
         return Object.assign({}, s, { _dist: sameCity ? null : haversineKm(originLat, originLng, s.lat, s.lng) });
-      }).sort(function(a, b) {
-        if (a._dist === null) return -1;
-        if (b._dist === null) return 1;
-        return a._dist - b._dist;
       });
+
+      var sameCityStores = withDistance.filter(function(s) { return s._dist === null; });
+      var distantStores = withDistance.filter(function(s) { return s._dist !== null; })
+        .sort(function(a, b) { return a._dist - b._dist; });
+
+      resultsLabel = label;
+      resultsSameCityHtml = sameCityStores.map(function(s) { return storeCardHtml(s, s._dist); }).join('');
+      resultsDistantQueue = distantStores;
+      resultsDistantIndex = 0;
+
+      renderResultsList();
+    }
+    function renderResultsList() {
+      var itemsHtml = resultsSameCityHtml;
+      for (var i = 0; i < resultsDistantIndex; i++) {
+        itemsHtml += storeCardHtml(resultsDistantQueue[i], resultsDistantQueue[i]._dist);
+      }
+      if (resultsDistantIndex < resultsDistantQueue.length) {
+        itemsHtml += '<li class="store-distant-label" onclick="revealNextDistantStore()">Un poco più lontano</li>';
+      }
       resultsSection.innerHTML =
-        '<div class="section-label">' + label + '</div>' +
-        '<ul class="store-results">' + withDistance.map(function(s) { return storeCardHtml(s, s._dist); }).join('') + '</ul>';
+        '<div class="section-label">' + resultsLabel + '</div>' +
+        '<ul class="store-results">' + itemsHtml + '</ul>';
+    }
+    function revealNextDistantStore() {
+      resultsDistantIndex++;
+      renderResultsList();
     }
     function findNearestStore(originLat, originLng) {
       var nearest = null;
