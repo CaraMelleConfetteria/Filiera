@@ -229,7 +229,7 @@
       list-style: none;
       max-width: 560px;
       margin: 0 auto;
-      padding: 0 16px;
+      padding: 8px 16px 0;
     }
     .store-card {
       display: flex;
@@ -721,7 +721,6 @@
         itemsHtml += '<li class="store-distant-label" onclick="revealNextDistantStore()">Un poco più lontano</li>';
       }
       resultsSection.innerHTML =
-        '<div class="section-label">' + resultsLabel + '</div>' +
         '<ul class="store-results">' + itemsHtml + '</ul>';
     }
     function revealNextDistantStore() {
