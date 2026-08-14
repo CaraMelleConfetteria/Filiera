@@ -284,7 +284,7 @@
     }
     header p .first-line {
       display: block;
-      font-size: 15px;
+      font-size: 18px;
       font-weight: 700;
       color: var(--text);
       font-style: italic;
@@ -624,8 +624,8 @@
     <div class="bio">
 <p>Mi chiamo Simona Carbone ma tutti mi conoscono come CaraMelle.</p>
 <p>
-  Ho aperto il mio laboratorio in Val Varaita scegliendo di dedicarmi esclusivamente all’arte della confetteria.<br>
-  Qui ho trovato un luogo da poter chiamar casa e per questo motivo ho scelto come nome CaraMelle, un omaggio al luogo che mi ha accolto, perché per me la confetteria è legame ed espressione del luogo in cui vivo.
+  Ho aperto il mio laboratorio a Melle in Val Varaita, Cuneo. Scegliendo di dedicarmi esclusivamente all’arte della confetteria.<br>
+  Qui ho trovato un luogo da poter chiamar casa e per questo motivo ho scelto questo nome come omaggio alla comunità che mi ha accolto, perché per me la confetteria è legame ed espressione del luogo in cui vivo.
 </p>
 <p>Lavoro esclusivamente con i prodotti del territorio dandogli una nuova veste, alla ricerca di un sapore che racconti queste valli.</p>
 </div>
@@ -790,6 +790,10 @@
       var voci = document.querySelectorAll('.cv-nav-desktop a, .cv-nav-mobile a');
 
       function aggiornaVoceAttiva() {
+        // La riga di attivazione sta al 60% dell'altezza dello schermo, non a
+        // 180px fissi: le ultime sezioni sono corte e in fondo alla pagina non
+        // arriverebbero mai così in alto — lo scroll finisce prima — quindi
+        // "Dove trovarci" non si accendeva mai e si passava da Listino a Scrivimi.
         var offset = Math.max(window.innerWidth < 768 ? 100 : 180,
                               window.innerHeight * 0.6);
         var attiva = null;
