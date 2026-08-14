@@ -14,6 +14,7 @@
       --muted: #888;
       --border: #e8e8e8;
       --bg: #fff;
+      --bar-bg: #ff7700; /* colore barre hamburger */
     }
     body {
       font-family: 'Raleway', sans-serif;
@@ -30,6 +31,204 @@
     @media (min-width: 600px) {
       body { padding-top: 10vh; }
     }
+
+    /* ═══════════════════════════════════════════
+       MENÙ — desktop + mobile
+       Breakpoint 978px: sopra nav orizzontale,
+       sotto hamburger → overlay fullscreen.
+       ═══════════════════════════════════════════ */
+
+    /* Barra: assente in cima alla pagina, scende quando si scrolla.
+       Niente bordo né ombra (header pulito).
+
+       z-index 9999 (sopra l'overlay a 9998): position:fixed + z-index
+       crea uno stacking context, quindi il 9999 dell'hamburger vale solo
+       DENTRO la barra — se la barra stesse sotto l'overlay, la X finirebbe
+       sotto il velo. pointer-events:none lascia comunque cliccabile il velo
+       nella striscia in alto; i figli se lo riprendono. */
+    .cv-navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 56px;
+      background-color: rgba(255, 255, 255, 0.92);
+      backdrop-filter: saturate(180%) blur(8px);
+      -webkit-backdrop-filter: saturate(180%) blur(8px);
+      pointer-events: none;
+      /* stato di riposo: fuori campo e non cliccabile */
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-100%);
+      transition: opacity 0.25s ease, transform 0.3s ease,
+                  visibility 0s linear 0.3s, background-color 0.25s ease;
+    }
+    .cv-navbar.cv-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      transition: opacity 0.25s ease, transform 0.3s ease,
+                  visibility 0s, background-color 0.25s ease;
+    }
+    .cv-nav-desktop,
+    .cv-btn-navbar { pointer-events: auto; }
+
+    /* A menù aperto la barra resta su (serve la X) ma senza doppio velo */
+    body.cv-nav-open .cv-navbar {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      background-color: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    /* ── NAV DESKTOP ── */
+    .cv-nav-desktop { display: none; }
+    @media (min-width: 979px) {
+      .cv-nav-desktop {
+        display: flex;
+        list-style: none;
+        align-items: center;
+        gap: 34px;
+      }
+      .cv-nav-desktop a {
+        position: relative;
+        display: inline-block;
+        padding-bottom: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: var(--text);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+      .cv-nav-desktop a:hover,
+      .cv-nav-desktop a.cv-active { color: var(--orange); }
+
+      /* Lineetta che si apre a fisarmonica dal centro.
+         scaleX con transform-origin:center invece di width+left:
+         stesso effetto, ma gira sulla GPU senza toccare il layout. */
+      .cv-nav-desktop a::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--orange);
+        transform: scaleX(0);
+        transform-origin: center;
+        transition: transform 0.25s ease;
+      }
+      .cv-nav-desktop a.cv-active::after { transform: scaleX(1); }
+      /* Voce attiva: colore + lineetta, nessun bordo o box-shadow */
+    }
+
+    /* ── HAMBURGER (≤978px) ── */
+    .cv-btn-navbar {
+      position: absolute;
+      right: 10px;
+      top: 3px;
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+      z-index: 9999;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (min-width: 979px) {
+      .cv-btn-navbar { display: none; }
+    }
+
+    /* Due barre 22×3 create con gli pseudo-elementi */
+    .cv-btn-navbar::before,
+    .cv-btn-navbar::after {
+      content: '';
+      position: absolute;
+      display: block;
+      width: 22px;
+      height: 3px;
+      background-color: var(--bar-bg);
+      border-radius: 1px;
+      transition: all 0.3s cubic-bezier(0.1, 0.82, 0.76, 0.965);
+      left: 50%;
+    }
+    .cv-btn-navbar::before { top: calc(50% - 6px); transform: translateX(-50%); }
+    .cv-btn-navbar::after  { top: calc(50% + 4px); transform: translateX(-50%); }
+
+    /* Aperto → X: entrambe al centro, ruotate ±45° */
+    .cv-btn-navbar[aria-expanded="true"]::before {
+      top: 50%;
+      transform: translateX(-50%) translateY(-50%) rotate(45deg);
+    }
+    .cv-btn-navbar[aria-expanded="true"]::after {
+      top: 50%;
+      transform: translateX(-50%) translateY(-50%) rotate(-45deg);
+    }
+
+    /* ── OVERLAY MOBILE ── */
+    .cv-nav-mobile {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      z-index: 9998;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(255, 255, 255, 0.90);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .cv-nav-mobile[aria-hidden="true"]  { display: none; }
+    .cv-nav-mobile[aria-hidden="false"] { display: flex; }
+    @media (min-width: 979px) {
+      .cv-nav-mobile[aria-hidden="false"] { display: none; }
+    }
+
+    .cv-nav-mobile ul {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .cv-nav-mobile li { display: block; width: auto; text-align: center; }
+    .cv-nav-mobile a {
+      display: block;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      border: none;
+      background-color: transparent;
+      padding: 10px 30px;
+      color: #000;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    .cv-nav-mobile a:hover,
+    .cv-nav-mobile a.cv-active { color: var(--orange); }
+
+    /* Blocca lo scroll della pagina sotto quando il menù è aperto */
+    body.cv-nav-open { overflow: hidden; }
+
+    /* Le ancore non finiscono sotto la barra fissa */
+    #sez-filiera, #sez-listino, #sez-dove { scroll-margin-top: 80px; }
+
     /* ── HEADER ── */
     header {
       padding: 32px 24px 24px;
@@ -286,6 +485,38 @@
       font-weight: 600;
     }
     .store-link:hover { color: var(--text); }
+    /* ── PROSSIMA FIERA ── */
+    .fiera-riga {
+      max-width: 560px;
+      width: 100%;
+      margin: 32px auto 0;
+      padding: 0 24px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .fiera-riga[hidden] { display: none; }
+    .fiera-riga strong { color: var(--orange); font-weight: 700; }
+    .fiera-riga .fiera-quando { color: var(--text); }
+    /* Tutta la riga della fiera è il link che scarica il .ics */
+    .fiera-ics {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .fiera-ics:hover { text-decoration: underline; }
+    /* Sta appiccicata alla riga della fiera; se quella manca, si riprende
+       lo stacco dalla sezione sopra. */
+    .fiera-invito { margin-top: 8px; }
+    .fiera-riga[hidden] + .fiera-invito { margin-top: 32px; }
+    .fiera-invito a {
+      color: var(--orange);
+      font-weight: 600; /* come .store-link e gli altri link in linea */
+      text-decoration: none;
+    }
+    .fiera-invito a:hover { color: var(--text); }
     /* ── FOOTER ── */
     footer {
       margin-top: 48px;
@@ -300,6 +531,28 @@
   </style>
 </head>
 <body>
+
+  <!-- ═══ MENÙ ═══ -->
+  <nav class="cv-navbar" id="cvNavbar">
+    <ul class="cv-nav-desktop">
+      <li><a href="#sez-filiera">Filiera</a></li>
+      <li><a href="#sez-listino">Listino</a></li>
+      <li><a href="#sez-dove">Dove trovarci</a></li>
+      <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener">Scrivimi</a></li>
+    </ul>
+    <button class="cv-btn-navbar" id="cvNavToggle" type="button"
+            aria-expanded="false" aria-controls="cvNavMobile" aria-label="Apri il menù"></button>
+  </nav>
+
+  <div class="cv-nav-mobile" id="cvNavMobile" aria-hidden="true">
+    <ul>
+      <li><a href="#sez-filiera">Filiera</a></li>
+      <li><a href="#sez-listino">Listino</a></li>
+      <li><a href="#sez-dove">Dove trovarci</a></li>
+      <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener">Scrivimi</a></li>
+    </ul>
+  </div>
+
   <header>
     <div class="brand-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 197.93 92.91" style="width:240px;height:auto;">
@@ -314,7 +567,7 @@
     </p>
   </header>
   <!-- FORNITORI -->
-  <ul class="suppliers">
+  <ul class="suppliers" id="sez-filiera">
     <li>
       <a class="supplier-card" href="artemisia/">
         <div class="card-body">
@@ -367,11 +620,10 @@
     </li>
   </ul>
   <!-- LISTINO -->
-  <div class="listino-title">Listino prodotti 2026</div>
+  <div class="listino-title" id="sez-listino">Listino prodotti 2026</div>
   <div class="listino-wrap">
     <p class="listino-intro">Prezzi al netto delle eventuali spese di spedizione.<br>Clicca su un prodotto per la lista ingredienti e i prezzi.</p>
     <div id="listino"><p class="loading">Caricamento in corso…</p></div>
-    </p>
   </div>
   <div class="listino-wrap" style="margin-top: 2rem;">
     <p style="font-size:13px; color:#1a1a1a; line-height:1.7; text-align:center;">
@@ -381,16 +633,99 @@
     </p>
   </div>
   <!-- DOVE TROVARCI -->
-  <div class="listino-wrap" style="margin-top: 48px;">
+  <div class="listino-wrap" style="margin-top: 48px;" id="sez-dove">
     <div class="store-finder-title">Hai bisogno di <span>CaraMelle?</span></div>
     <input type="text" class="search-input" id="cityInput" placeholder="Dimmi dove ti trovi" autocomplete="off" />
     <div class="search-status" id="searchStatus"></div>
   </div>
   <div id="resultsSection"></div>
+  <!-- PROSSIMA FIERA (resta invisibile finché non c'è una data in calendario) -->
+  <p class="fiera-riga" id="fieraRiga" hidden></p>
+  <p class="fiera-riga fiera-invito">
+    Unisciti al gruppo
+    <a href="https://chat.whatsapp.com/ED9OnjSwRty2DFBozCLl5X" target="_blank" rel="noopener">Golosone!</a>
+    su WhatsApp per ricevere il calendario ogni mese
+  </p>
   <footer>
     CaraMelle – confetteria di valle / Frassino (CN)<br>
     P.IVA: 01614180626 · SDI KRRH6B9 · <a href="https://www.confetteriadivalle.it">www.confetteriadivalle.it</a>
   </footer>
+
+  <script>
+    /* ════════════════════════════════════════════
+       MENÙ — apertura/chiusura + voce attiva
+       Contratto identico a Humus: aria-expanded sul
+       bottone, aria-hidden sull'overlay. Il CSS fa
+       il resto.
+       ════════════════════════════════════════════ */
+    (function () {
+      var toggle  = document.getElementById('cvNavToggle');
+      var overlay = document.getElementById('cvNavMobile');
+      var navbar  = document.getElementById('cvNavbar');
+
+      function apri() {
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', 'Chiudi il menù');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('cv-nav-open');
+      }
+      function chiudi() {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Apri il menù');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('cv-nav-open');
+      }
+
+      toggle.addEventListener('click', function () {
+        toggle.getAttribute('aria-expanded') === 'true' ? chiudi() : apri();
+      });
+
+      // Click su una voce → chiude e va alla sezione
+      overlay.addEventListener('click', function (e) {
+        if (e.target.closest('a')) chiudi();
+        else if (e.target === overlay) chiudi(); // click sul velo
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') chiudi();
+      });
+
+      // Tornando a desktop il menù non deve restare aperto e bloccare lo scroll
+      window.addEventListener('resize', function () {
+        if (window.innerWidth > 978 && toggle.getAttribute('aria-expanded') === 'true') chiudi();
+      });
+
+      /* La barra compare solo dopo che si è scesi: in cima alla pagina
+         non c'è, così l'header col logo resta pulito. */
+      var SOGLIA_BARRA = 80;
+      function aggiornaBarra() {
+        if (document.body.classList.contains('cv-nav-open')) return; // menù aperto: resta su
+        navbar.classList.toggle('cv-visible', window.scrollY > SOGLIA_BARRA);
+      }
+      window.addEventListener('scroll', aggiornaBarra, { passive: true });
+      aggiornaBarra();
+
+      /* Voce attiva in base alla sezione visibile (stesso offset di Humus) */
+      var sezioni = ['sez-filiera', 'sez-listino', 'sez-dove']
+        .map(function (id) { return document.getElementById(id); })
+        .filter(Boolean);
+      var voci = document.querySelectorAll('.cv-nav-desktop a[href^="#"], .cv-nav-mobile a[href^="#"]');
+
+      function aggiornaVoceAttiva() {
+        var offset = window.innerWidth < 768 ? 100 : 180;
+        var attiva = null;
+        sezioni.forEach(function (sez) {
+          if (sez.getBoundingClientRect().top <= offset) attiva = '#' + sez.id;
+        });
+        voci.forEach(function (a) {
+          a.classList.toggle('cv-active', a.getAttribute('href') === attiva);
+        });
+      }
+      window.addEventListener('scroll', aggiornaVoceAttiva, { passive: true });
+      aggiornaVoceAttiva();
+    })();
+  </script>
+
   <script>
     var SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTjk6-jLHIRRtuQl_SuPKvrW0LlVfb2y_IYTgTTlazrC6x7blgp7Yy3oGMzxN5cQ4HBwT9dkzuJTnuj/pub?gid=2131769219&single=true&output=csv';
     var ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
@@ -577,7 +912,8 @@
       whatsappMessage: "Ciao! Cerco Caramelle ma non ho trovato un punto vendita vicino a me, potete spedire?",
       nominatimUrl: "https://nominatim.openstreetmap.org/search",
       debounceMs: 600,
-      minChars: 2
+      // 3 e non 4: "Bra" è un comune, e ci hai un negozio.
+      minChars: 3
     };
     var ALL_STORES = [];
     var storesLoaded = false;
@@ -598,6 +934,10 @@
         .replace(/[̀-ͯ]/g, '')
         .trim()
         .toLowerCase();
+    }
+    // Spezza un nome di luogo nelle sue parole, già normalizzate.
+    function storeWords(str) {
+      return storeNormalize(str).split(/[^a-z0-9]+/).filter(Boolean);
     }
     function haversineKm(lat1, lon1, lat2, lon2) {
       var R = 6371;
@@ -651,12 +991,21 @@
           // Verifica che il comune trovato corrisponda davvero a quello cercato:
           // senza questo controllo, città non italiane (es. Berlino) vengono
           // agganciate a un match fuzzy qualsiasi entro i confini italiani.
-          var target = storeNormalize(cityLabel);
+          //
+          // Il confronto è per PAROLA, non per sottostringa: cercando "ano"
+          // la vecchia versione accettava Milano perché lo conteneva a metà.
+          // Spezzando su spazi, barre e trattini restano validi i nomi doppi
+          // che OSM restituisce da queste parti (Casteddu/Cagliari, e i nomi
+          // occitani delle valli), ma un frammento in mezzo non passa più.
+          var targetWords = storeWords(cityLabel);
           var candidates = [addr.city, addr.town, addr.village, addr.hamlet, addr.municipality, addr.county];
           var nameMatches = candidates.some(function(c) {
             if (!c) return false;
-            var n = storeNormalize(c);
-            return n === target || n.indexOf(target) !== -1 || target.indexOf(n) !== -1;
+            return storeWords(c).some(function(parola) {
+              return targetWords.some(function(cercata) {
+                return parola === cercata || parola.indexOf(cercata) === 0;
+              });
+            });
           });
           if (!nameMatches) return null;
           var provincia = addr.county || addr.state_district || addr.province || null;
@@ -816,6 +1165,262 @@
       searchStatus.textContent = '';
       debounceTimer = setTimeout(function() { runStoreSearch(city); }, STORE_CONFIG.debounceMs);
     });
+  </script>
+
+  <script>
+    /* ════════════════════════════════════════════
+       PROSSIMA FIERA — dal calendario Google "Mercati"
+
+       Il feed .ics pubblico NON manda gli header CORS, quindi da qui
+       è illeggibile: si passa dall'API Calendar, che il CORS ce l'ha
+       ma vuole una chiave. La chiave è in chiaro qui sotto — è
+       accettabile solo perché va limitata, nella console Google, alla
+       sola Calendar API e al solo dominio confetteriadivalle.it.
+
+       Senza chiave la riga resta invisibile: la pagina non mostra
+       mai un errore al visitatore.
+       ════════════════════════════════════════════ */
+    (function () {
+      var FIERE_CONFIG = {
+        calendarId: 'e3f9c4af42f28e3e13395780c6961a5ac31c840bc52d522e69c472b38c9159d7@group.calendar.google.com',
+        apiKey: 'AIzaSyALb0DCeXCfusHimnBfilMIfz8kVoagMjk'
+      };
+
+      var riga = document.getElementById('fieraRiga');
+      if (!riga || !FIERE_CONFIG.apiKey) return;
+
+      var MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+                  'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+
+      function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+      }
+
+      // Google usa {date} per gli eventi di giornata intera e {dateTime}
+      // per quelli a orario. Il primo va letto come data locale, non UTC,
+      // altrimenti in Italia una fiera del 10 diventa il 9 sera.
+      function leggiData(punto) {
+        if (!punto) return null;
+        if (punto.date) {
+          var p = punto.date.split('-');
+          return new Date(+p[0], +p[1] - 1, +p[2]);
+        }
+        return new Date(punto.dateTime);
+      }
+
+      function aMezzanotte(d) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+
+      function conAnno(d) {
+        return d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '';
+      }
+
+      // Italiano: "l'8 novembre" e non "il 8", "il 1º dicembre" e non "il 1".
+      // Elisione solo su 8 e 11, che sono gli unici numeri del mese che
+      // iniziano per vocale.
+      function elide(g) { return g === 8 || g === 11; }
+      function numGiorno(g) { return g === 1 ? '1º' : String(g); }
+      function ilG(g)  { return (elide(g) ? "l'"    : 'il ')  + numGiorno(g); }
+      function dalG(g) { return (elide(g) ? "dall'" : 'dal ') + numGiorno(g); }
+      function alG(g)  { return (elide(g) ? "all'"  : 'al ')  + numGiorno(g); }
+
+      function quando(inizio, fine) {
+        var g1 = aMezzanotte(inizio), g2 = aMezzanotte(fine);
+        if (g1.getTime() === g2.getTime()) {
+          return ilG(g1.getDate()) + ' ' + MESI[g1.getMonth()] + conAnno(g1);
+        }
+        if (g1.getMonth() === g2.getMonth() && g1.getFullYear() === g2.getFullYear()) {
+          return dalG(g1.getDate()) + ' ' + alG(g2.getDate()) + ' ' + MESI[g2.getMonth()] + conAnno(g2);
+        }
+        return dalG(g1.getDate()) + ' ' + MESI[g1.getMonth()] + conAnno(g1) +
+               ' ' + alG(g2.getDate()) + ' ' + MESI[g2.getMonth()] + conAnno(g2);
+      }
+
+      function ora(d) {
+        var m = d.getMinutes();
+        return d.getHours() + (m ? ':' + (m < 10 ? '0' + m : m) : '');
+      }
+
+      // Google restituisce il luogo come indirizzo intero preso dalla mappa
+      // ("Frassino, 12020 Frassino CN, Italia"). In una riga di testo serve
+      // il nome, non il CAP: butto via "Italia", riduco il pezzo col CAP al
+      // solo comune e tolgo i doppioni. Se l'indirizzo è scritto a mano
+      // resta com'è.
+      function luogoPulito(loc) {
+        if (!loc) return '';
+        var visti = {};
+        return loc.split(',')
+          .map(function (p) { return p.trim(); })
+          .filter(function (p) { return p && !/^(italia|italy)$/i.test(p); })
+          .map(function (p) {
+            return p.replace(/^\d{5}\s+/, '').replace(/\s+[A-Z]{2}$/, '').trim();
+          })
+          .filter(function (p) {
+            var k = p.toLowerCase();
+            if (!p || visti[k]) return false;
+            visti[k] = true;
+            return true;
+          })
+          .join(', ');
+      }
+
+      /* ── File .ics generato qui nel browser ──
+         Su Humus lo serviva PHP con l'header text/calendar; qui non c'è
+         backend, quindi lo impacchetto in un Blob e lo consegno con
+         l'attributo download. Per il calendario del cliente è lo stesso
+         file. */
+
+      // Nei campi TEXT dell'ics questi caratteri vanno protetti, altrimenti
+      // una virgola nell'indirizzo spezza il campo.
+      function icsEsc(s) {
+        return String(s || '')
+          .replace(/\\/g, '\\\\')
+          .replace(/;/g, '\\;')
+          .replace(/,/g, '\\,')
+          .replace(/\r?\n/g, '\\n');
+      }
+
+      // Lo standard vuole righe da max 75 ottetti, spezzate con CRLF + spazio.
+      function piega(riga) {
+        if (riga.length <= 73) return riga;
+        var out = riga.slice(0, 73), resto = riga.slice(73);
+        while (resto.length > 72) {
+          out += '\r\n ' + resto.slice(0, 72);
+          resto = resto.slice(72);
+        }
+        return out + '\r\n ' + resto;
+      }
+
+      function dueCifre(n) { return n < 10 ? '0' + n : '' + n; }
+      function dataUTC(d) {
+        return d.getUTCFullYear() + dueCifre(d.getUTCMonth() + 1) + dueCifre(d.getUTCDate()) +
+               'T' + dueCifre(d.getUTCHours()) + dueCifre(d.getUTCMinutes()) +
+               dueCifre(d.getUTCSeconds()) + 'Z';
+      }
+      function soloData(d) {
+        return d.getFullYear() + dueCifre(d.getMonth() + 1) + dueCifre(d.getDate());
+      }
+
+      function costruisciIcs(evento, inizio, fine, haOrario) {
+        var righe = [];
+        if (haOrario) {
+          righe.push('DTSTART:' + dataUTC(inizio));
+          righe.push('DTEND:' + dataUTC(fine));
+        } else {
+          // Per gli eventi di giornata intera anche l'ics vuole la fine
+          // esclusiva: è già così che arriva da Google, quindi passo
+          // la data originale e non quella corretta per la visualizzazione.
+          righe.push('DTSTART;VALUE=DATE:' + evento.start.date.replace(/-/g, ''));
+          righe.push('DTEND;VALUE=DATE:' + (evento.end && evento.end.date
+            ? evento.end.date.replace(/-/g, '')
+            : soloData(new Date(inizio.getTime() + 86400000))));
+        }
+
+        var corpo = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//Confetteria di Valle//Fiere CaraMelle//IT',
+          'CALSCALE:GREGORIAN',
+          'METHOD:PUBLISH',
+          'BEGIN:VEVENT',
+          // L'id dell'evento Google rende l'UID stabile: chi lo riscarica
+          // aggiorna quello che ha già invece di ritrovarsi un doppione.
+          'UID:' + (evento.id || 'fiera-' + Date.now()) + '@confetteriadivalle.it',
+          'DTSTAMP:' + dataUTC(new Date())
+        ].concat(righe, [
+          'SUMMARY:' + icsEsc(evento.summary + ' — CaraMelle'),
+          'LOCATION:' + icsEsc(evento.location || ''),
+          'DESCRIPTION:' + icsEsc('Mi trovi qui con CaraMelle — confetteria di valle.\nhttps://filiera.confetteriadivalle.it'),
+          'STATUS:CONFIRMED',
+          'BEGIN:VALARM',
+          // Con un orario preciso bastano due ore; per una fiera di giornata
+          // il promemoria utile è la sera prima.
+          'TRIGGER:' + (haOrario ? '-PT2H' : '-P1D'),
+          'ACTION:DISPLAY',
+          'DESCRIPTION:' + icsEsc(evento.summary + ' — CaraMelle'),
+          'END:VALARM',
+          'END:VEVENT',
+          'END:VCALENDAR'
+        ]);
+
+        return corpo.map(piega).join('\r\n') + '\r\n';
+      }
+
+      function nomeFile(titolo) {
+        var base = (titolo || 'fiera').toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return (base || 'fiera') + '.ics';
+      }
+
+      function mostra(evento) {
+        var haOrario = !!(evento.start && evento.start.dateTime);
+        var inizio = leggiData(evento.start);
+        var fine   = leggiData(evento.end) || inizio;
+        // Per gli eventi di giornata intera Google mette come fine il giorno
+        // DOPO l'ultimo: una fiera del solo 12 arriva come 12→13.
+        if (evento.end && evento.end.date) fine = new Date(fine.getTime() - 86400000);
+        if (fine < inizio) fine = inizio;
+
+        var oggi = aMezzanotte(new Date());
+        var g1 = aMezzanotte(inizio), g2 = aMezzanotte(fine);
+        var inCorso = g1 <= oggi && g2 >= oggi;
+        var unGiorno = g1.getTime() === g2.getTime();
+
+        var pezzi = ['<strong>' + esc(evento.summary) + '</strong>'];
+
+        var dove = luogoPulito(evento.location);
+        if (dove) pezzi.push(esc(dove));
+
+        var q;
+        if (inCorso && unGiorno) {
+          // "Oggi mi trovi a … oggi" non si può leggere: resta solo l'orario
+          q = haOrario ? 'dalle ' + ora(inizio) + ' alle ' + ora(fine) : '';
+        } else {
+          q = quando(inizio, fine);
+          if (haOrario && unGiorno) q += ', dalle ' + ora(inizio) + ' alle ' + ora(fine);
+        }
+        if (q) pezzi.push('<span class="fiera-quando">' + q + '</span>');
+
+        var apertura = inCorso
+          ? (unGiorno ? 'Oggi mi trovi a ' : 'In questi giorni mi trovi a ')
+          : 'La prossima fiera in cui trovarmi è ';
+
+        var ics = new Blob([costruisciIcs(evento, inizio, fine, haOrario)],
+                           { type: 'text/calendar;charset=utf-8' });
+
+        riga.innerHTML = apertura +
+          '<a class="fiera-ics" href="' + URL.createObjectURL(ics) +
+          '" download="' + nomeFile(evento.summary) +
+          '" title="Aggiungi al tuo calendario">' + pezzi.join(' — ') + '</a>';
+        riga.hidden = false;
+      }
+
+      // timeMin filtra sulla FINE dell'evento: le fiere già iniziate ma
+      // non ancora finite restano nell'elenco, ed è quello che vogliamo.
+      var url = 'https://www.googleapis.com/calendar/v3/calendars/' +
+                encodeURIComponent(FIERE_CONFIG.calendarId) + '/events' +
+                '?key=' + encodeURIComponent(FIERE_CONFIG.apiKey) +
+                '&singleEvents=true&orderBy=startTime&maxResults=5' +
+                '&timeMin=' + encodeURIComponent(new Date().toISOString());
+
+      fetch(url)
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          var eventi = (data.items || []).filter(function (e) { return e.summary && e.start; });
+          if (eventi.length) mostra(eventi[0]);
+        })
+        .catch(function (err) {
+          // Silenzio verso il visitatore: la riga semplicemente non compare.
+          console.warn('Prossima fiera non disponibile:', err.message);
+        });
+    })();
   </script>
 </body>
 </html>
