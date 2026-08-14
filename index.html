@@ -54,9 +54,11 @@
       align-items: center;
       justify-content: center;
       height: 56px;
-      background-color: rgba(255, 255, 255, 0.92);
-      backdrop-filter: saturate(180%) blur(8px);
-      -webkit-backdrop-filter: saturate(180%) blur(8px);
+      /* Velo leggero: sotto si deve intravedere il contenuto che scorre.
+         La sfocatura fa il lavoro che farebbe l'opacità, senza coprire. */
+      background-color: rgba(255, 255, 255, 0.55);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
       pointer-events: none;
       /* stato di riposo: fuori campo e non cliccabile */
       opacity: 0;
@@ -487,7 +489,7 @@
     .store-link:hover { color: var(--text); }
     /* ── PROSSIMA FIERA ── */
     .fiera-riga {
-      max-width: 560px;
+      max-width: 720px; /* più largo dei 560 del listino: la riga sta su una riga sola */
       width: 100%;
       margin: 32px auto 0;
       padding: 0 24px;
@@ -498,25 +500,26 @@
       line-height: 1.6;
     }
     .fiera-riga[hidden] { display: none; }
-    .fiera-riga strong { color: var(--orange); font-weight: 700; }
-    .fiera-riga .fiera-quando { color: var(--text); }
-    /* Tutta la riga della fiera è il link che scarica il .ics */
-    .fiera-ics {
-      color: inherit;
+    /* Tutta la riga della fiera è un unico link che scarica il .ics.
+       Stesso vestito di "Golosone!" qui sotto e degli altri link in linea:
+       arancione 600, nero al passaggio del mouse. */
+    .fiera-ics,
+    .fiera-invito a,
+    .fiera-link {
+      color: var(--orange);
+      font-weight: 600;
       text-decoration: none;
       cursor: pointer;
     }
-    .fiera-ics:hover { text-decoration: underline; }
+    .fiera-ics:hover,
+    .fiera-invito a:hover,
+    .fiera-link:hover { color: var(--text); }
+    /* La data non si spezza a metà: mai un "20" orfano a capo */
+    .fiera-quando { white-space: nowrap; }
     /* Sta appiccicata alla riga della fiera; se quella manca, si riprende
        lo stacco dalla sezione sopra. */
     .fiera-invito { margin-top: 8px; }
     .fiera-riga[hidden] + .fiera-invito { margin-top: 32px; }
-    .fiera-invito a {
-      color: var(--orange);
-      font-weight: 600; /* come .store-link e gli altri link in linea */
-      text-decoration: none;
-    }
-    .fiera-invito a:hover { color: var(--text); }
     /* ── FOOTER ── */
     footer {
       margin-top: 48px;
@@ -626,7 +629,7 @@
     <div id="listino"><p class="loading">Caricamento in corso…</p></div>
   </div>
   <div class="listino-wrap" style="margin-top: 2rem;">
-    <p style="font-size:13px; color:#1a1a1a; line-height:1.7; text-align:center;">
+    <p style="font-size:13px; color:#888; line-height:1.7; text-align:center;">
       Se sei interessato ad avere CaraMelle nel tuo negozio<br>
       <a href="https://wa.me/393339386382?text=Ciao%2C%20sono%20interessato%20ad%20avere%20CaraMelle%20nel%20mio%20negozio" target="_blank" class="store-link">scrivimi</a>
       per il listino dedicato.
@@ -641,7 +644,7 @@
   <div id="resultsSection"></div>
   <!-- PROSSIMA FIERA (resta invisibile finché non c'è una data in calendario) -->
   <p class="fiera-riga" id="fieraRiga" hidden></p>
-  <p class="fiera-riga fiera-invito">
+  <p class="fiera-riga fiera-invito" id="golosoneRiga">
     Unisciti al gruppo
     <a href="https://chat.whatsapp.com/ED9OnjSwRty2DFBozCLl5X" target="_blank" rel="noopener">Golosone!</a>
     su WhatsApp per ricevere il calendario ogni mese
@@ -717,6 +720,12 @@
         sezioni.forEach(function (sez) {
           if (sez.getBoundingClientRect().top <= offset) attiva = '#' + sez.id;
         });
+        // A fondo pagina l'ultima sezione non arriva mai alla riga dell'offset
+        // perché lo scroll finisce prima: senza questo, "Dove trovarci" non si
+        // accende mai e resta acceso "Listino".
+        var aFondo = window.innerHeight + window.scrollY >=
+                     document.documentElement.scrollHeight - 4;
+        if (aFondo && sezioni.length) attiva = '#' + sezioni[sezioni.length - 1].id;
         voci.forEach(function (a) {
           a.classList.toggle('cv-active', a.getAttribute('href') === attiva);
         });
@@ -1186,6 +1195,8 @@
         apiKey: 'AIzaSyALb0DCeXCfusHimnBfilMIfz8kVoagMjk'
       };
 
+      var LINK_GOLOSONE = 'https://chat.whatsapp.com/ED9OnjSwRty2DFBozCLl5X';
+
       var riga = document.getElementById('fieraRiga');
       if (!riga || !FIERE_CONFIG.apiKey) return;
 
@@ -1370,7 +1381,7 @@
         var inCorso = g1 <= oggi && g2 >= oggi;
         var unGiorno = g1.getTime() === g2.getTime();
 
-        var pezzi = ['<strong>' + esc(evento.summary) + '</strong>'];
+        var pezzi = [esc(evento.summary)];
 
         var dove = luogoPulito(evento.location);
         if (dove) pezzi.push(esc(dove));
@@ -1386,8 +1397,8 @@
         if (q) pezzi.push('<span class="fiera-quando">' + q + '</span>');
 
         var apertura = inCorso
-          ? (unGiorno ? 'Oggi mi trovi a ' : 'In questi giorni mi trovi a ')
-          : 'La prossima fiera in cui trovarmi è ';
+          ? (unGiorno ? 'Oggi sono in fiera ' : 'In questi giorni sono in fiera ')
+          : 'Sarò in fiera ';
 
         var ics = new Blob([costruisciIcs(evento, inizio, fine, haOrario)],
                            { type: 'text/calendar;charset=utf-8' });
@@ -1396,6 +1407,18 @@
           '<a class="fiera-ics" href="' + URL.createObjectURL(ics) +
           '" download="' + nomeFile(evento.summary) +
           '" title="Aggiungi al tuo calendario">' + pezzi.join(' — ') + '</a>';
+        riga.hidden = false;
+      }
+
+      // Nessuna data in calendario: un'unica riga che dice come restare
+      // aggiornati, e quella del gruppo qui sotto sparisce — direbbe la
+      // stessa cosa due volte.
+      function nessunaFiera() {
+        var golosone = document.getElementById('golosoneRiga');
+        if (golosone) golosone.hidden = true;
+        riga.innerHTML = 'Per ora non ho fiere in programma, ma unisciti al gruppo ' +
+          '<a class="fiera-link" href="' + LINK_GOLOSONE + '" target="_blank" rel="noopener">Golosone!</a>' +
+          ' per restare aggiornato';
         riga.hidden = false;
       }
 
@@ -1415,9 +1438,11 @@
         .then(function (data) {
           var eventi = (data.items || []).filter(function (e) { return e.summary && e.start; });
           if (eventi.length) mostra(eventi[0]);
+          else nessunaFiera();
         })
         .catch(function (err) {
-          // Silenzio verso il visitatore: la riga semplicemente non compare.
+          // Se la chiamata fallisce NON diciamo "niente fiere": non lo sappiamo.
+          // Resta la riga del gruppo, che è vera in ogni caso.
           console.warn('Prossima fiera non disponibile:', err.message);
         });
     })();
