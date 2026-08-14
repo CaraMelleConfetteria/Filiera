@@ -790,7 +790,8 @@
       var voci = document.querySelectorAll('.cv-nav-desktop a, .cv-nav-mobile a');
 
       function aggiornaVoceAttiva() {
-        var offset = window.innerWidth < 768 ? 100 : 180;
+        var offset = Math.max(window.innerWidth < 768 ? 100 : 180,
+                              window.innerHeight * 0.6);
         var attiva = null;
         sezioni.forEach(function (sez) {
           if (sez.getBoundingClientRect().top <= offset) attiva = '#' + sez.id;
