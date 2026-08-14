@@ -236,6 +236,37 @@
       padding: 32px 24px 24px;
       text-align: center;
     }
+    /* Contenitore dell'animazione Lottie, in cima a tutto.
+       Finché è vuoto non esiste: niente spazio bianco in attesa. */
+    .lottie-top {
+      max-width: 320px;
+      margin: 0 auto 16px;
+    }
+    .lottie-top:empty { display: none; }
+    /* Presentazione centrata: gli a capo sono decisi a mano nel testo
+       (<br>), non lasciati al caso della larghezza dello schermo. */
+    .bio {
+      max-width: 620px;
+      margin: 24px auto 0;
+      text-align: center;
+    }
+    .bio p {
+      margin-top: 0;
+      max-width: none;
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .bio p + p { margin-top: 10px; }
+    .bio + p { margin-top: 28px; }
+    /* Gli a capo marcati valgono solo da tablet in su: sul telefono la
+       colonna è stretta e produrrebbero righe sbilenche, meglio lasciare
+       che il testo vada a capo da sé. */
+    .bio br { display: none; }
+    @media (min-width: 600px) {
+      .bio br { display: inline; }
+    }
     .brand-logo {
       margin-bottom: 8px;
       display: flex;
@@ -557,6 +588,9 @@
   </div>
 
   <header>
+    <!-- LOTTIE — incolla qui dentro il player quando l'animazione è pronta.
+         Finché il div resta vuoto non occupa spazio. -->
+    <div class="lottie-top" id="lottieTop"></div>
     <div class="brand-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 197.93 92.91" style="width:240px;height:auto;">
         <defs><style>.st0{fill:#3d3d3c}.st1{fill:#1d1d1b;font-family:Raleway-Regular,Raleway;font-size:11.14px}</style></defs>
@@ -564,6 +598,13 @@
         <text class="st1" transform="translate(52.06 79.72)"><tspan x="0" y="0">confetteria di Valle</tspan></text>
       </svg>
     </div>
+    <div class="bio">
+ <p>Mi chiamo Simona Carbone ma tutti mi conoscono come CaraMelle.</p>
+  <p>Ho aperto il mio laboratorio in Val Varaita scegliendo di dedicarmi esclusivamente all’arte della confetteria.</p>
+  <p>Qui ho trovato un luogo da poter chiamar casa e una comunità che mi ha accolta dandomi la fiducia necessaria per fermarmi ed il coraggio per iniziare a costruire.</p>
+  <p>Per questo motivo ho scelto come nome CaraMelle, un omaggio al luogo che mi ha accolto, perché per me la confetteria è legame ed espressione del luogo in cui vivo.</p>
+  <p>Lavoro esclusivamente con i prodotti del territorio dandogli una nuova veste, alla ricerca di un sapore che racconti queste valli.</p>
+</div>
     <p>
       <span class="first-line">"La trasparenza è la forma più onesta di comunicazione"</span>
       Qui trovi le realtà dalle quali arrivano le mie materie prime,<br>perchè senza di loro sarebbe tutto più difficile.
@@ -1344,7 +1385,7 @@
         ].concat(righe, [
           'SUMMARY:' + icsEsc(evento.summary + ' — CaraMelle'),
           'LOCATION:' + icsEsc(evento.location || ''),
-          'DESCRIPTION:' + icsEsc('Mi trovi qui con CaraMelle — confetteria di valle.\nhttps://filiera.confetteriadivalle.it'),
+          'DESCRIPTION:' + icsEsc('Mi trovi qui con CaraMelle — confetteria di valle.\nhttps://www.confetteriadivalle.it'),
           'STATUS:CONFIRMED',
           'BEGIN:VALARM',
           // Con un orario preciso bastano due ore; per una fiera di giornata
