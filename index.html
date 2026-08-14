@@ -1254,15 +1254,23 @@
         resultsSection.innerHTML = '';
         return;
       }
-      // Uovo di Pasqua. searchSeq++ serve davvero: se una ricerca precedente
-      // è ancora in volo, la sua risposta sovrascriverebbe questa frase.
-      if (storeNormalize(city) === 'culo') {
+      // Uova di Pasqua. Il confronto passa da storeWords, che toglie maiuscole,
+      // accenti e punteggiatura: così "Chi ha fatto il sito?" vale anche senza
+      // punto interrogativo. searchSeq++ non è decorativo — se una ricerca
+      // precedente è ancora in volo, la sua risposta sovrascriverebbe la frase.
+      var UOVA = {
+        'culo': 'Ti giuro, non mi interessa, ma dovresti accettarlo',
+        'chi ha fatto il sito': 'Il coadiuvante'
+      };
+      var frase = storeWords(city).join(' ');
+      if (UOVA[frase]) {
         searchSeq++;
         searchStatus.textContent = '';
         resultsSection.innerHTML =
-          '<div class="store-empty"><p>Ti giuro, non mi interessa, ma dovresti accettarlo</p></div>';
+          '<div class="store-empty"><p>' + UOVA[frase] + '</p></div>';
         return;
       }
+      
       searchStatus.textContent = '';
       debounceTimer = setTimeout(function() { runStoreSearch(city); }, STORE_CONFIG.debounceMs);
     });
