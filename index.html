@@ -1260,8 +1260,8 @@
       // precedente è ancora in volo, la sua risposta sovrascriverebbe la frase.
       var UOVA = {
         'culo': 'Ti giuro, non mi interessa, ma dovresti accettarlo',
-        'chi ha fatto il sito': 'Il coadiuvante'
-        'il senso della vita': '42'
+        'chi ha fatto il sito': 'Il coadiuvante',
+        'il senso della vita': '42',
         'come fare le melanzane buone': 'Scolale col sale grosso'
       };
       var frase = storeWords(city).join(' ');
@@ -1272,7 +1272,7 @@
           '<div class="store-empty"><p>' + UOVA[frase] + '</p></div>';
         return;
       }
-      
+
       searchStatus.textContent = '';
       debounceTimer = setTimeout(function() { runStoreSearch(city); }, STORE_CONFIG.debounceMs);
     });
