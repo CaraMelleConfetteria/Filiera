@@ -6,6 +6,9 @@
   <title>Filiera & Listino – Confetteria di Valle</title>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Lettore Lottie: componente web, nessun lettore con barra e cursore.
+       type="module" lo rende differito, quindi non rallenta il primo disegno. -->
+  <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.4/dist/dotlottie-wc.js" type="module"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -235,10 +238,31 @@
     /* Contenitore dell'animazione Lottie, in cima a tutto.
        Finché è vuoto non esiste: niente spazio bianco in attesa. */
     .lottie-top {
-      max-width: 320px;
-      margin: 0 auto 16px;
+      max-width: 342px;   /* 320 + 7% */
+      margin: 0 auto 6px;
+      /* Puramente decorativo: non deve cambiare il cursore né rubare i clic. */
+      pointer-events: none;
     }
     .lottie-top:empty { display: none; }
+    .lottie-top dotlottie-wc {
+      display: block;
+      width: 100%;
+      /* 2600x1300 nel file sorgente: il rapporto esatto è 2:1. Dichiararlo
+         riserva lo spazio giusto prima che l'animazione carichi — e soprattutto
+         non lascia la fascia vuota che un quadrato aggiungeva sotto il disegno. */
+      aspect-ratio: 2 / 1;
+    }
+    /* Da tablet in su il doppio, lo stacco sotto resta stretto.
+       I 40px verso destra correggono il centraggio ottico: il peso del disegno
+       sta a sinistra, quindi il centro geometrico non è quello percepito.
+       Solo da 600px in su — su telefono lo spingerebbero oltre il bordo,
+       facendo comparire lo scorrimento orizzontale su tutta la pagina. */
+    @media (min-width: 600px) {
+      .lottie-top {
+        max-width: 685px;              /* 640 + 7% */
+        transform: translateX(40px);
+      }
+    }
     /* Presentazione centrata: gli a capo sono decisi a mano nel testo
        (<br>), non lasciati al caso della larghezza dello schermo. */
     .bio {
@@ -611,9 +635,12 @@
   </div>
 
   <header>
-    <!-- LOTTIE — incolla qui dentro il player quando l'animazione è pronta.
-         Finché il div resta vuoto non occupa spazio. -->
-    <div class="lottie-top" id="lottieTop"></div>
+    <!-- LOTTIE — decorativo: autoplay, in ciclo continuo, senza comandi.
+         pointer-events:none nel CSS lo rende insensibile al mouse. -->
+    <div class="lottie-top" id="lottieTop">
+      <dotlottie-wc src="https://lottie.host/fa4d0f13-e59a-4dbc-b011-4a9fcf0297fd/8RaxC4ih9u.lottie"
+                    autoplay loop speed="0.85"></dotlottie-wc>
+    </div>
     <div class="brand-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 197.93 92.91" style="width:240px;height:auto;">
         <defs><style>.st0{fill:#3d3d3c}.st1{fill:#1d1d1b;font-family:Raleway-Regular,Raleway;font-size:11.14px}</style></defs>
