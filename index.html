@@ -344,6 +344,13 @@
       transition: border-color 0.2s, transform 0.15s;
       background: rgba(255, 255, 255, 0.4);
     }
+    /* L'ultima scheda non è un fornitore di materie prime: la stacco dalle
+       altre così si legge come una firma, non come un ingrediente.
+       24px sopra i 12 del gap = 36px di respiro. */
+    .suppliers .extra { margin-top: 24px; }
+    /* Freccia invisibile ma presente: occupa lo spazio, così "Torino" resta
+       incolonnato con le località delle altre schede. */
+    .suppliers .extra .card-arrow { opacity: 0; }
     .supplier-card:hover { border-color: var(--orange); transform: translateY(-1px); }
     .supplier-card:active { transform: translateY(0); }
     .card-body { flex: 1; min-width: 0; }
@@ -710,6 +717,17 @@
           <div class="card-product">Tisaneria</div>
         </div>
         <span class="card-tag">Melle</span>
+        <span class="card-arrow">›</span>
+      </a>
+    </li>
+    <li class="extra">
+      <a class="supplier-card" href="https://www.instagram.com/alessandro_rivoir"
+         target="_blank" rel="noopener">
+        <div class="card-body">
+          <div class="card-name">Alessandro Rivoir</div>
+          <div class="card-product">Illustratore</div>
+        </div>
+        <span class="card-tag">Torino</span>
         <span class="card-arrow">›</span>
       </a>
     </li>
