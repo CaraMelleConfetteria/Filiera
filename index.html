@@ -411,27 +411,27 @@
 
     /* ── INVITO ALLA VERSIONE INGLESE ──
        Velo su tutta la pagina, non più una barra in basso: chi ha il
-       browser in un'altra lingua deve accorgersene, non scoprirlo.
-       Compare solo su pagina italiana e si toglie di mezzo per cinque ore.
+       browser in un'altra lingua deve accorgersene. Ma la scritta resta
+       piccola come prima — a renderla evidente è il velo, non il corpo
+       del carattere.
 
-       Il bianco al 40% da solo lascia passare il testo della pagina e
-       rende la scritta illeggibile: la sfocatura dietro è quello che la
-       fa staccare, ed è la stessa dei pop-up del gestionale. Dove il
-       backdrop-filter non c'è, il velo sale al 75% (regola più sotto). */
+       Il bianco al 40% da solo lascia passare la pagina sotto: la
+       sfocatura è quello che stacca la scritta, come nei pop-up del
+       gestionale. Senza backdrop-filter il velo sale al 75%. */
     .cv-invito-lingua {
       position: fixed;
       inset: 0;
-      /* Sopra la barra (9999) e l'overlay del menù (9998): è una scelta
-         da prendere, e ricaricando a pagina scrollata la barra fissa
-         sbucherebbe sopra il velo. */
+      /* Sopra la barra (9999) e l'overlay del menù (9998): ricaricando a
+         pagina scrollata la barra fissa sbucherebbe sopra il velo. */
       z-index: 10000;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 34px;
-      padding: 32px 24px;
+      gap: 16px;
+      padding: 24px;
       text-align: center;
+      font-size: 13px;
+      color: var(--text);
       background: rgba(255, 255, 255, 0.4);
       -webkit-backdrop-filter: blur(7px);
       backdrop-filter: blur(7px);
@@ -444,53 +444,31 @@
       .cv-invito-lingua { background: rgba(255, 255, 255, 0.75); }
     }
 
-    /* Raleway 300 in corpo grande: la stessa voce della presentazione
-       di Simona, non un avviso di sistema. */
-    .cv-invito-lingua .cv-testo {
-      font-size: clamp(26px, 5.2vw, 44px);
-      font-weight: 300;
-      line-height: 1.22;
-      letter-spacing: -0.005em;
-      color: var(--text);
-      max-width: 15ch;
-      text-wrap: balance;
-      margin: 0;
-    }
-
-    .cv-invito-lingua .cv-scelte {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 18px;
-    }
     .cv-invito-lingua button {
       font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       border: none;
       background: none;
       padding: 0;
       cursor: pointer;
-      transition: color 0.2s ease, border-color 0.2s ease;
+      white-space: nowrap;
+      transition: color 0.2s ease;
     }
-    .cv-invito-lingua .cv-si {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--orange);
-      padding-bottom: 7px;
-      border-bottom: 2px solid var(--orange);
-    }
-    .cv-invito-lingua .cv-si:hover { color: #000; border-bottom-color: #000; }
-    .cv-invito-lingua .cv-no {
-      font-size: 13px;
-      font-weight: 400;
-      letter-spacing: 0.03em;
-      color: #a8a49e;
-    }
-    .cv-invito-lingua .cv-no:hover { color: var(--text); }
+    .cv-invito-lingua .cv-si { color: var(--orange); font-weight: 600; }
+    .cv-invito-lingua .cv-si:hover { color: #000; }
+    .cv-invito-lingua .cv-no { color: #b0b0b0; }
+    .cv-invito-lingua .cv-no:hover { color: #000; }
 
     /* Blocca lo scorrimento sotto al velo */
     body.cv-invito-aperto { overflow: hidden; }
+
+    @media (max-width: 640px) {
+      .cv-invito-lingua { flex-wrap: wrap; gap: 12px 14px; }
+      .cv-invito-lingua .cv-testo { flex: 1 0 100%; }
+      .cv-invito-lingua .cv-no { white-space: normal; }
+    }
 
     @media (prefers-reduced-motion: reduce) {
       .cv-invito-lingua { transition: none; }
@@ -2003,11 +1981,9 @@
     var invito = document.createElement('div');
     invito.className = 'cv-invito-lingua';
     invito.innerHTML =
-      '<p class="cv-testo">This page is also available in English.</p>' +
-      '<div class="cv-scelte">' +
-        '<button type="button" class="cv-si">Read in English</button>' +
-        '<button type="button" class="cv-no">No thanks, I want to learn Italian</button>' +
-      '</div>';
+      '<span class="cv-testo">This page is also available in English.</span>' +
+      '<button type="button" class="cv-si">Read in English</button>' +
+      '<button type="button" class="cv-no">No thanks, I want to learn Italian</button>';
 
     invito.querySelector('.cv-si').addEventListener('click', function () {
       ricorda();
