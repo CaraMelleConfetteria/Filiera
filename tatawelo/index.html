@@ -187,8 +187,63 @@
 </head>
 <body>
 
+  <!-- ═══ LINGUA ═══
+       Versione ridotta di quello della pagina principale: qui le stringhe
+       sono sette. La lingua arriva da ?lang= o dall'ultima scelta salvata,
+       così chi apre questa scheda dalla pagina in inglese la trova in
+       inglese. L'italiano non sta nel dizionario: resta scritto nel
+       documento e fa da ripiego. -->
+  <script>
+  (function () {
+    var EN = {
+      'indietro':  'Explore the supply chain',
+      'etichetta': 'Supplier \u00b7 Supply chain',
+      'prodotto':  'Chiapas coffee from a transparent supply chain',
+      'Telefono':  'Phone',
+      'Sito web':  'Website',
+      'Indirizzo': 'Address',
+      'salva':     'Save contact'
+    };
+
+    /* Stessa regola della pagina principale: l'inglese salvato vale solo
+       finché il browser non è italiano, così rimettendo l'italiano nelle
+       impostazioni si torna in italiano anche da qui. */
+    var lang = 'it';
+    try {
+      var chiesta = new URLSearchParams(location.search).get('lang');
+      var browserStraniero = (navigator.language || '').toLowerCase().indexOf('it') !== 0;
+      if (chiesta === 'en' || chiesta === 'it') {
+        lang = chiesta;
+        localStorage.setItem('cv_lang', lang);
+      } else if (browserStraniero && localStorage.getItem('cv_lang') === 'en') {
+        lang = 'en';
+      }
+    } catch (e) {}
+
+    document.documentElement.lang = lang;
+    if (lang !== 'en') return;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var nodi = document.querySelectorAll('[data-i18n]');
+      for (var i = 0; i < nodi.length; i++) {
+        var v = EN[nodi[i].getAttribute('data-i18n')];
+        if (v) nodi[i].textContent = v;
+      }
+      // WhatsApp ed Email si scrivono uguale: cambiano solo le altre due
+      var etich = document.querySelectorAll('.contact-label');
+      for (var j = 0; j < etich.length; j++) {
+        var t = etich[j].textContent.trim();
+        if (EN[t]) etich[j].textContent = EN[t];
+      }
+      // Il ritorno alla filiera si porta dietro la lingua
+      var su = document.getElementById('cvSu');
+      if (su) su.setAttribute('href', '../?lang=en');
+    });
+  })();
+  </script>
+
  <div style="max-width: 400px; width: 100%;">
-    <a href="https://filiera.confetteriadivalle.it" style="
+    <a id="cvSu" href="../" style="
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -205,16 +260,16 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"/>
       </svg>
-      Scopri la filiera
+      <span data-i18n="indietro">Scopri la filiera</span>
     </a>
     <div class="card">
     <div class="card-header">
       <div class="logo-wrap">
       <img src="../img/Tatawelo.jpg" alt="Tatawelo">
       </div>
-      <div class="label">Fornitore · Filiera</div>
+      <div class="label" data-i18n="etichetta">Fornitore · Filiera</div>
       <h1>Progetto Caffè Tatawelo</h1>
-      <div class="product-tag">Caffè del Chiapas da filiera trasparente</div>
+      <div class="product-tag" data-i18n="prodotto">Caffè del Chiapas da filiera trasparente</div>
     </div>
       
       <div class="card-body">
@@ -259,7 +314,7 @@
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Salva Contatto
+        <span data-i18n="salva">Salva Contatto</span>
       </a>
     </div>
     </div>
