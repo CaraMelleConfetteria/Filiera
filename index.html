@@ -9,6 +9,185 @@
   <!-- Lettore Lottie: componente web, nessun lettore con barra e cursore.
        type="module" lo rende differito, quindi non rallenta il primo disegno. -->
   <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.4/dist/dotlottie-wc.js" type="module"></script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LINGUA — italiano e inglese, senza plugin e senza pagina doppia
+
+       Un file solo. L'italiano NON sta nel dizionario: resta scritto
+       nel documento e nel codice, e fa da ripiego automatico per ogni
+       chiave che manca. Conseguenza voluta: una traduzione dimenticata
+       si vede in italiano, non sparisce.
+
+       La lingua arriva da ?lang=en nell'URL, che viene ricordato in
+       localStorage per le altre pagine del sito (schede fornitore, 404).
+       Niente cookie: qui non ci sono chiamate al server da etichettare,
+       i fetch vanno tutti a Google.
+       ═══════════════════════════════════════════════════════════════ -->
+  <script>
+  (function () {
+    'use strict';
+
+    var EN = {
+
+      /* ── Menù ── */
+      'nav.filiera':  'Supply chain',
+      'nav.listino':  'Price list',
+      'nav.dove':     'Where to find us',
+      'nav.scrivimi': 'Write to me',
+      'nav.stampa':   'Press kit',
+      'nav.apri':     'Open the menu',
+
+      /* ── Testata ── */
+      'meta.titolo':  'Supply chain & price list – Confetteria di Valle',
+      'bio.1':        'My name is Simona Carbone, but everyone knows me as CaraMelle.',
+      'bio.2':        'I opened my workshop in Melle, in the Varaita Valley near Cuneo, choosing to devote myself entirely to the art of confectionery.<br>Here I found a place I could call home, and that is why I chose this name as a tribute to the community that welcomed me, because to me confectionery is a bond and an expression of the place where I live.',
+      'bio.3':        'I work only with what this land produces, giving it a new form, in search of a flavour that tells the story of these valleys.',
+      'quota.frase':  '"Transparency is the most honest form of communication"',
+      'quota.sotto':  'Here are the people my ingredients come from,<br>because without them all of this would be far harder.',
+
+      /* ── Fornitori ── */
+      'forn.artemisia':  'Cold-dehydrated fruit and herbs',
+      'forn.lim':        'Lim Chocolate — Specialty Cacao',
+      'forn.tatawelo':   'Chiapas coffee from a transparent supply chain',
+      'forn.iminuti':    'imiNUTi — Almonds from the Piedmont Consortium',
+      'forn.valverbe':   'Herbal teas',
+      'forn.rivoir':     'Illustrator',
+      'forn.tag.italia': 'Italy',
+      'forn.tag.torino': 'Turin',
+
+      /* ── Categorie del listino ──
+         Nel Foglio la categoria è una sola, l'italiana, e resta l'identità
+         del gruppo: se un prodotto è sempre disponibile in italiano lo è
+         anche in inglese. Qui c'è solo l'etichetta da stampare — come il
+         dizionario per slug di Humus. Sono tre e non cambiano: stanno nel
+         codice, non in una colonna del Foglio da tenere aggiornata. */
+      'cat.sempre disponibili':      'Always available',
+      'cat.stagionali':              'Seasonal',
+      'cat.disponibilita variabile': 'Subject to availability',
+
+      /* ── Listino ── */
+      'listino.titolo':    '2026 price list',
+      'listino.intro':     'Prices do not include shipping, where it applies.<br>Tap a product for its ingredients and prices.',
+      'listino.caricando': 'Loading…',
+      'listino.errore':    'Could not load the data.',
+      'listino.negozio':   'If you would like to stock CaraMelle in your shop',
+      'listino.negozio.link': 'write to me',
+      'listino.negozio.coda': 'for the trade price list.',
+      'listino.wa.negozio':   'Hello, I would like to stock CaraMelle in my shop',
+
+      /* ── Tabella prezzi ── */
+      'tab.assaggino':  'Taster',
+      'tab.confezione': 'Pack',
+      'tab.sfuso.etto': 'Loose, per 100 g (under 1 kg)',
+      'tab.sfuso.kg':   'Loose, per kg (1 kg and over)',
+      'tab.moq200':     'min. 200 g',
+      'tab.moq1kg':     'min. 1 kg',
+      'tab.schede':     'Ingredient spec sheets',
+      'tab.allergeni':  'Allergens',
+
+      /* ── Dove trovarci ── */
+      'dove.titolo':      'Looking for <span>CaraMelle?</span>',
+      'dove.placeholder': 'Tell me where you are',
+      'dove.cerco':       'Searching…',
+      'dove.provincia':   'Shops in the province of',
+      'dove.lontano':     'A little further away',
+      'dove.vicino':      'The nearest shop is:',
+      'dove.spedisco':    'Write to me anyway, I can ship',
+
+      /* ── Fiere ── */
+      'fiera.oggi':      'Today you will find me at ',
+      'fiera.giorni':    'These days you will find me at ',
+      'fiera.futuro':    'You will find me at ',
+      'fiera.dalle':     'from',
+      'fiera.alle':      'to',
+      'fiera.calendario':'Add to your calendar',
+      'fiera.ics.desc':  'You will find me here with CaraMelle — confetteria di valle.',
+      'fiera.nessuna':   'No markets planned just yet, but join the ',
+      'fiera.nessuna.coda': ' group to stay up to date',
+      'golosone.pre':    'Join the ',
+      'golosone.post':   ' group on WhatsApp to get the calendar every month',
+
+      /* ── Contatti e piede ── */
+      'contatti.instagram': 'If you are after photographs this is the wrong place, come to Instagram!',
+      'footer.piva':        'VAT no.'
+
+      /* L'invito alla versione inglese non sta qui: lo legge chi ha la
+         pagina in italiano, e T() gli risponderebbe in italiano. È scritto
+         in chiaro nel suo script, in fondo alla pagina. */
+    };
+
+    /* Nel menù non c'è nessuna voce per cambiare lingua: all'inglese ci
+       si arriva solo accettando il banner, e da lì si resta in inglese.
+
+       La via di ritorno è la lingua del BROWSER. Per questo l'inglese
+       salvato vale solo finché il browser non è italiano: chi rimette
+       l'italiano nelle impostazioni si ritrova il sito in italiano, senza
+       dover trovare un comando da qualche parte nella pagina.
+
+       ?lang= vince su tutto per quella visita — è così che il banner porta
+       all'inglese, ed è quello che rende condivisibile un indirizzo. */
+    var lang = 'it';
+    try {
+      var chiesta = new URLSearchParams(location.search).get('lang');
+      var browserStraniero = (navigator.language || '').toLowerCase().indexOf('it') !== 0;
+      if (chiesta === 'en' || chiesta === 'it') {
+        lang = chiesta;
+        localStorage.setItem('cv_lang', lang);
+      } else if (browserStraniero && localStorage.getItem('cv_lang') === 'en') {
+        lang = 'en';
+      }
+    } catch (e) { /* localStorage negato: resta l'italiano */ }
+
+    window.CV_LANG = lang;
+    document.documentElement.lang = lang;
+
+    /* T('chiave', 'testo italiano') — l'italiano è l'argomento, non una
+       voce del dizionario: il codice resta leggibile in chiaro. */
+    window.T = function (chiave, italiano) {
+      if (lang !== 'en') return italiano;
+      var v = EN[chiave];
+      return (v === undefined || v === '') ? italiano : v;
+    };
+
+    /* Traduce il testo già scritto nell'HTML. Quattro attributi portano
+       una CHIAVE del dizionario: data-i18n (testo), -html (con marcatura
+       dentro), -ph (segnaposto), -aria (etichetta). */
+    window.cvApplicaTraduzioni = function () {
+      if (lang !== 'en') return;
+
+      document.title = T('meta.titolo', document.title);
+
+      var mappa = [
+        ['data-i18n',      function (el, v) { el.textContent = v; }],
+        ['data-i18n-html', function (el, v) { el.innerHTML = v; }],
+        ['data-i18n-ph',   function (el, v) { el.setAttribute('placeholder', v); }],
+        ['data-i18n-aria', function (el, v) { el.setAttribute('aria-label', v); }]
+      ];
+      for (var m = 0; m < mappa.length; m++) {
+        var attr = mappa[m][0], scrivi = mappa[m][1];
+        var nodi = document.querySelectorAll('[' + attr + ']');
+        for (var i = 0; i < nodi.length; i++) {
+          var v = EN[nodi[i].getAttribute(attr)];
+          if (v !== undefined && v !== '') scrivi(nodi[i], v);
+        }
+      }
+
+      /* I collegamenti interni si portano dietro la lingua, così un
+         indirizzo copiato dalla barra resta in inglese anche per chi
+         lo riceve (che non ha il localStorage di chi lo ha mandato). */
+      var link = document.querySelectorAll('a[href]');
+      for (var j = 0; j < link.length; j++) {
+        var h = link[j].getAttribute('href');
+        /* Fuori: ancore, indirizzi assoluti e lo scambio lingua stesso,
+           che porta già il suo ?lang= e ne prenderebbe un secondo. */
+        if (!h || h.charAt(0) === '#' || h.charAt(0) === '?' ||
+            /^(https?:|mailto:|tel:|blob:)/i.test(h)) continue;
+        link[j].setAttribute('href', h + (h.indexOf('?') === -1 ? '?' : '&') + 'lang=en');
+      }
+    };
+  })();
+  </script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -229,6 +408,50 @@
 
     /* Le ancore non finiscono sotto la barra fissa */
     #sez-filiera, #sez-listino, #sez-dove { scroll-margin-top: 80px; }
+
+    /* ── INVITO ALLA VERSIONE INGLESE ──
+       Compare in basso solo a chi ha il browser in un'altra lingua e
+       sta leggendo l'italiano. Si toglie di mezzo per cinque ore. */
+    .cv-invito-lingua {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(12px);
+      z-index: 9997;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: calc(100vw - 32px);
+      padding: 12px 18px;
+      background: #fff;
+      border: 1px solid #ececec;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .cv-invito-lingua.cv-visibile { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .cv-invito-lingua button {
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.2s ease;
+    }
+    .cv-invito-lingua .cv-si { color: var(--orange); font-weight: 600; }
+    .cv-invito-lingua .cv-si:hover { color: #000; }
+    .cv-invito-lingua .cv-no { color: #b0b0b0; }
+    .cv-invito-lingua .cv-no:hover { color: var(--text); }
+    @media (max-width: 520px) {
+      .cv-invito-lingua { flex-wrap: wrap; gap: 10px 14px; font-size: 12.5px; }
+      .cv-invito-lingua .cv-testo { flex: 1 0 100%; }
+    }
 
     /* ── HEADER ── */
     header {
@@ -619,25 +842,26 @@
   <!-- ═══ MENÙ ═══ -->
   <nav class="cv-navbar" id="cvNavbar">
     <ul class="cv-nav-desktop">
-      <li><a href="#sez-filiera">Filiera</a></li>
-      <li><a href="#sez-listino">Listino</a></li>
-      <li><a href="#sez-dove">Dove trovarci</a></li>
-      <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener" data-sez="sez-contatti">Scrivimi</a></li>
+      <li><a href="#sez-filiera" data-i18n="nav.filiera">Filiera</a></li>
+      <li><a href="#sez-listino" data-i18n="nav.listino">Listino</a></li>
+      <li><a href="#sez-dove" data-i18n="nav.dove">Dove trovarci</a></li>
+      <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener" data-sez="sez-contatti" data-i18n="nav.scrivimi">Scrivimi</a></li>
       <li><a href="https://drive.google.com/uc?export=download&amp;id=1OPxF3xcLbTl0ZN1L2m90Fe-t70l3OLB7"
-             target="_blank" rel="noopener">Cartella stampa</a></li>
+             target="_blank" rel="noopener" data-i18n="nav.stampa">Cartella stampa</a></li>
     </ul>
     <button class="cv-btn-navbar" id="cvNavToggle" type="button"
-            aria-expanded="false" aria-controls="cvNavMobile" aria-label="Apri il menù"></button>
+            aria-expanded="false" aria-controls="cvNavMobile"
+            aria-label="Apri il menù" data-i18n-aria="nav.apri"></button>
   </nav>
 
   <div class="cv-nav-mobile" id="cvNavMobile" aria-hidden="true">
     <ul>
-      <li><a href="#sez-filiera">Filiera</a></li>
-      <li><a href="#sez-listino">Listino</a></li>
-      <li><a href="#sez-dove">Dove trovarci</a></li>
-      <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener" data-sez="sez-contatti">Scrivimi</a></li>
+      <li><a href="#sez-filiera" data-i18n="nav.filiera">Filiera</a></li>
+      <li><a href="#sez-listino" data-i18n="nav.listino">Listino</a></li>
+      <li><a href="#sez-dove" data-i18n="nav.dove">Dove trovarci</a></li>
+      <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener" data-sez="sez-contatti" data-i18n="nav.scrivimi">Scrivimi</a></li>
       <li><a href="https://drive.google.com/uc?export=download&amp;id=1OPxF3xcLbTl0ZN1L2m90Fe-t70l3OLB7"
-             target="_blank" rel="noopener">Cartella stampa</a></li>
+             target="_blank" rel="noopener" data-i18n="nav.stampa">Cartella stampa</a></li>
     </ul>
   </div>
 
@@ -656,16 +880,16 @@
       </svg>
     </div>
     <div class="bio">
-<p>Mi chiamo Simona Carbone ma tutti mi conoscono come CaraMelle.</p>
-<p>
+<p data-i18n="bio.1">Mi chiamo Simona Carbone ma tutti mi conoscono come CaraMelle.</p>
+<p data-i18n-html="bio.2">
   Ho aperto il mio laboratorio a Melle in Val Varaita, Cuneo, scegliendo di dedicarmi esclusivamente all’arte della confetteria.<br>
   Qui ho trovato un luogo da poter chiamar casa e per questo motivo ho scelto questo nome come omaggio alla comunità che mi ha accolto, perché per me la confetteria è legame ed espressione del luogo in cui vivo.
 </p>
-<p>Lavoro esclusivamente con i prodotti del territorio dandogli una nuova veste, alla ricerca di un sapore che racconti queste valli.</p>
+<p data-i18n="bio.3">Lavoro esclusivamente con i prodotti del territorio dandogli una nuova veste, alla ricerca di un sapore che racconti queste valli.</p>
 </div>
     <p>
-      <span class="first-line">"La trasparenza è la forma più onesta di comunicazione"</span>
-      Qui trovi le realtà dalle quali arrivano le mie materie prime,<br>perchè senza di loro sarebbe tutto più difficile.
+      <span class="first-line" data-i18n="quota.frase">"La trasparenza è la forma più onesta di comunicazione"</span>
+      <span data-i18n-html="quota.sotto">Qui trovi le realtà dalle quali arrivano le mie materie prime,<br>perchè senza di loro sarebbe tutto più difficile.</span>
     </p>
   </header>
   <!-- FORNITORI -->
@@ -674,7 +898,7 @@
       <a class="supplier-card" href="artemisia/">
         <div class="card-body">
           <div class="card-name">Artemisia bio</div>
-          <div class="card-product">Disidratato a freddo</div>
+          <div class="card-product" data-i18n="forn.artemisia">Disidratato a freddo</div>
         </div>
         <span class="card-tag">Beinette</span>
         <span class="card-arrow">›</span>
@@ -684,7 +908,7 @@
       <a class="supplier-card" href="lim-chocolate/">
         <div class="card-body">
           <div class="card-name">Federico Dutto</div>
-          <div class="card-product">Lim Chocolate — Specialty Cacao</div>
+          <div class="card-product" data-i18n="forn.lim">Lim Chocolate — Specialty Cacao</div>
         </div>
         <span class="card-tag">San Sebastiano</span>
         <span class="card-arrow">›</span>
@@ -694,9 +918,9 @@
       <a class="supplier-card" href="tatawelo/">
         <div class="card-body">
           <div class="card-name">Progetto Caffè Tatawelo</div>
-          <div class="card-product">Caffè del Chiapas da filiera trasparente</div>
+          <div class="card-product" data-i18n="forn.tatawelo">Caffè del Chiapas da filiera trasparente</div>
         </div>
-        <span class="card-tag">Italia</span>
+        <span class="card-tag" data-i18n="forn.tag.italia">Italia</span>
         <span class="card-arrow">›</span>
       </a>
     </li>
@@ -704,7 +928,7 @@
       <a class="supplier-card" href="iminuti/">
         <div class="card-body">
           <div class="card-name">Stefano Marchisio</div>
-          <div class="card-product">imiNUTi — Mandorle del Consorzio Piemontese</div>
+          <div class="card-product" data-i18n="forn.iminuti">imiNUTi — Mandorle del Consorzio Piemontese</div>
         </div>
         <span class="card-tag">Cuneo</span>
         <span class="card-arrow">›</span>
@@ -714,7 +938,7 @@
       <a class="supplier-card" href="valverbe/">
         <div class="card-body">
           <div class="card-name">Valverbe</div>
-          <div class="card-product">Tisaneria</div>
+          <div class="card-product" data-i18n="forn.valverbe">Tisaneria</div>
         </div>
         <span class="card-tag">Melle</span>
         <span class="card-arrow">›</span>
@@ -725,39 +949,39 @@
          target="_blank" rel="noopener">
         <div class="card-body">
           <div class="card-name">Alessandro Rivoir</div>
-          <div class="card-product">Illustratore</div>
+          <div class="card-product" data-i18n="forn.rivoir">Illustratore</div>
         </div>
-        <span class="card-tag">Torino</span>
+        <span class="card-tag" data-i18n="forn.tag.torino">Torino</span>
         <span class="card-arrow">›</span>
       </a>
     </li>
   </ul>
   <!-- LISTINO -->
-  <div class="listino-title" id="sez-listino">Listino prodotti 2026</div>
+  <div class="listino-title" id="sez-listino" data-i18n="listino.titolo">Listino prodotti 2026</div>
   <div class="listino-wrap">
-    <p class="listino-intro">Prezzi al netto delle eventuali spese di spedizione.<br>Clicca su un prodotto per la lista ingredienti e i prezzi.</p>
-    <div id="listino"><p class="loading">Caricamento in corso…</p></div>
+    <p class="listino-intro" data-i18n-html="listino.intro">Prezzi al netto delle eventuali spese di spedizione.<br>Clicca su un prodotto per la lista ingredienti e i prezzi.</p>
+    <div id="listino"><p class="loading" data-i18n="listino.caricando">Caricamento in corso…</p></div>
   </div>
   <div class="listino-wrap" style="margin-top: 2rem;">
     <p style="font-size:13px; color:#888; line-height:1.7; text-align:center;">
-      Se sei interessato ad avere CaraMelle nel tuo negozio<br>
-      <a href="https://wa.me/393339386382?text=Ciao%2C%20sono%20interessato%20ad%20avere%20CaraMelle%20nel%20mio%20negozio" target="_blank" class="store-link">scrivimi</a>
-      per il listino dedicato.
+      <span data-i18n="listino.negozio">Se sei interessato ad avere CaraMelle nel tuo negozio</span><br>
+      <a href="https://wa.me/393339386382?text=Ciao%2C%20sono%20interessato%20ad%20avere%20CaraMelle%20nel%20mio%20negozio" target="_blank" class="store-link" id="waNegozio" data-i18n="listino.negozio.link">scrivimi</a>
+      <span data-i18n="listino.negozio.coda">per il listino dedicato.</span>
     </p>
   </div>
   <!-- DOVE TROVARCI -->
   <div class="listino-wrap" style="margin-top: 48px;" id="sez-dove">
-    <div class="store-finder-title">Hai bisogno di <span>CaraMelle?</span></div>
-    <input type="text" class="search-input" id="cityInput" placeholder="Dimmi dove ti trovi" autocomplete="off" />
+    <div class="store-finder-title" data-i18n-html="dove.titolo">Hai bisogno di <span>CaraMelle?</span></div>
+    <input type="text" class="search-input" id="cityInput" placeholder="Dimmi dove ti trovi" data-i18n-ph="dove.placeholder" autocomplete="off" />
     <div class="search-status" id="searchStatus"></div>
   </div>
   <div id="resultsSection"></div>
   <!-- PROSSIMA FIERA (resta invisibile finché non c'è una data in calendario) -->
   <p class="fiera-riga" id="fieraRiga" hidden></p>
   <p class="fiera-riga fiera-invito" id="golosoneRiga">
-    Unisciti al gruppo
+    <span data-i18n="golosone.pre">Unisciti al gruppo</span>
     <a href="https://chat.whatsapp.com/ED9OnjSwRty2DFBozCLl5X" target="_blank" rel="noopener">Golosone!</a>
-    su WhatsApp per ricevere il calendario ogni mese
+    <span data-i18n="golosone.post">su WhatsApp per ricevere il calendario ogni mese</span>
   </p>
     <!-- CONTATTI -->
   <div class="listino-title" style="margin-top:88px" id="sez-contatti">CaraMelle</div>
@@ -765,12 +989,30 @@
     <a href="https://wa.me/393339386382" target="_blank" rel="noopener">+39 333 938 63 82</a><br>
     <a href="mailto:simona@confetteriadivalle.it">simona@confetteriadivalle.it</a><br>
     <a href="https://www.google.com/maps/search/?api=1&amp;query=Via+Curtil+3%2C+12020+Frassino+CN" target="_blank" rel="noopener">Via Curtil 3 — Frassino (CN)</a><br>
-    <a class="instagram" href="https://www.instagram.com/caramelle.confetteriadivalle" target="_blank" rel="noopener">Se cerchi delle foto non è il posto giusto, vieni su Instagram!</a>
+    <a class="instagram" href="https://www.instagram.com/caramelle.confetteriadivalle" target="_blank" rel="noopener" data-i18n="contatti.instagram">Se cerchi delle foto non è il posto giusto, vieni su Instagram!</a>
   </div>
   <footer>
     CaraMelle – confetteria di valle / Frassino (CN)<br>
-    P.IVA: 01614180626 · SDI KRRH6B9 · <a href="https://www.confetteriadivalle.it">www.confetteriadivalle.it</a>
+    <span data-i18n="footer.piva">P.IVA</span>: 01614180626 · SDI KRRH6B9 · <a href="https://www.confetteriadivalle.it">www.confetteriadivalle.it</a>
   </footer>
+
+  <!-- Traduzione della pagina: subito dopo la marcatura e prima di ogni
+       altro script, così i testi sono già a posto quando parte il resto.
+       È sincrono di proposito: rimandarlo a DOMContentLoaded farebbe
+       lampeggiare l'italiano prima dell'inglese. -->
+  <script>
+    cvApplicaTraduzioni();
+
+    /* Il messaggio già scritto di WhatsApp non è testo della pagina:
+       sta dentro l'indirizzo, quindi va sostituito a parte. */
+    if (window.CV_LANG === 'en') {
+      var waNeg = document.getElementById('waNegozio');
+      if (waNeg) {
+        waNeg.href = 'https://wa.me/393339386382?text=' +
+          encodeURIComponent(T('listino.wa.negozio', ''));
+      }
+    }
+  </script>
 
   <script>
     /* ════════════════════════════════════════════
@@ -878,8 +1120,21 @@
       'confezione_grammi': 'confezione_grammi',
       'sfuso_etto_kg': 'sfuso_sotto_prezzo',
       'sfuso_sopra_kg': 'sfuso_sopra_prezzo',
-      'pubblicato': 'pubblicato'
+      'pubblicato': 'pubblicato',
+      // Colonne inglesi: facoltative, e sono solo due. Il NOME del prodotto
+      // non si traduce mai (Ghiaie, Bisou, Brisetti sono nomi propri) e la
+      // CATEGORIA sta nel dizionario qui sopra, non nel Foglio.
+      // Cella vuota = resta l'italiano: non cancella mai niente, come
+      // nell'import delle traduzioni di Humus.
+      'denominazione_en': 'descrizione_en',
+      'ingredienti_en': 'ingredienti_en'
     };
+
+    // Legge un campo nella lingua giusta, con ripiego sull'italiano.
+    function campo(r, base) {
+      if (window.CV_LANG === 'en' && r[base + '_en']) return r[base + '_en'];
+      return r[base] || '';
+    }
     function parseCSV(text) {
       // splitta rispettando i campi multiriga tra virgolette
       var records = splitCSVRecords(text.trim());
@@ -938,11 +1193,16 @@
       result.push(current);
       return result;
     }
+    // In italiano "12,50 €", in inglese "€12.50": cambia la virgola
+    // decimale e cambia il posto del simbolo. L'ettogrammo in inglese
+    // non esiste come parola, si scrive "per 100 g".
     function formatPrezzo(prezzo, grammi) {
       if (!prezzo) return '/';
       var p = parseFloat(prezzo.replace(',', '.'));
       if (isNaN(p)) return '/';
-      var str = p.toFixed(2).replace('.', ',') + ' €';
+      var str = window.CV_LANG === 'en'
+        ? '\u20ac' + p.toFixed(2)
+        : p.toFixed(2).replace('.', ',') + ' \u20ac';
       if (grammi) str += '/' + grammi + ' g';
       return str;
     }
@@ -950,13 +1210,17 @@
       if (!prezzo) return '/';
       var p = parseFloat(prezzo.replace(',', '.'));
       if (isNaN(p)) return '/';
-      return p.toFixed(0) + ' €/kg';
+      return window.CV_LANG === 'en'
+        ? '\u20ac' + p.toFixed(0) + '/kg'
+        : p.toFixed(0) + ' \u20ac/kg';
     }
     function formatPrezzoEtto(prezzo) {
       if (!prezzo) return '/';
       var p = parseFloat(prezzo.replace(',', '.'));
       if (isNaN(p)) return '/';
-      return p.toFixed(2).replace('.', ',') + ' €/etto';
+      return window.CV_LANG === 'en'
+        ? '\u20ac' + p.toFixed(2) + '/100 g'
+        : p.toFixed(2).replace('.', ',') + ' \u20ac/etto';
     }
     function highlightAllergens(text) {
       return text.replace(/\b([A-ZÀÈÉÌÒÙÜ]{2,})\b/g, '<strong>$1</strong>');
@@ -967,12 +1231,25 @@
       var prodotti = [];
       for (var i = 0; i < rows.length; i++) {
         if (rows[i].categoria && rows[i].categoria.toLowerCase() === 'note') {
-          notaTracce = highlightAllergens((rows[i].ingredienti || '').replace(/\r\n|\r|\n/g, '<br>'));
+          notaTracce = highlightAllergens(campo(rows[i], 'ingredienti').replace(/\r\n|\r|\n/g, '<br>'));
         } else {
           prodotti.push(rows[i]);
         }
       }
       rows = prodotti;
+
+      /* I prodotti restano raggruppati sulla categoria ITALIANA: è quella
+         l'identità del gruppo. In inglese cambia solo l'etichetta stampata,
+         presa dal dizionario. La chiave ignora maiuscole e accenti, così
+         se nel Foglio la categoria viene riscritta un po' diversa
+         ("Sempre Disponibili") la traduzione regge lo stesso. */
+      function etichettaCategoria(itCat) {
+        if (window.CV_LANG !== 'en' || !itCat) return itCat;
+        var chiave = 'cat.' + itCat.toLowerCase().trim()
+                       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return T(chiave, itCat);
+      }
+
       var container = document.getElementById('listino');
       var html = '';
       var currentCat = '';
@@ -980,31 +1257,34 @@
         var r = rows[i];
         if (r.categoria !== currentCat) {
           currentCat = r.categoria;
-          html += '<div class="lc-cat">' + currentCat + '</div>';
+          html += '<div class="lc-cat">' + etichettaCategoria(currentCat) + '</div>';
         }
         var assaggino = formatPrezzo(r.assaggino_prezzo, r.assaggino_grammi);
         var sfusoSotto = formatPrezzoEtto(r.sfuso_sotto_prezzo);
         var sfusoSopra = formatPrezzoKg(r.sfuso_sopra_prezzo);
         var confezione = formatPrezzo(r.confezione_prezzo, r.confezione_grammi);
-        var ingredienti = highlightAllergens(r.ingredienti || '');
+        var ingredienti = highlightAllergens(campo(r, 'ingredienti'));
         var schedaUrl = r.url_scheda || '';
         var schedaValida = schedaUrl && schedaUrl !== 'URL_SCHEDA_TECNICA' && schedaUrl.indexOf('http') === 0;
+        var etichettaScheda = T('tab.schede', 'Schede tecniche ingredienti');
         var schedaHtml = schedaValida
-          ? '<a href="' + schedaUrl + '" class="scheda-link">' + ICON_SVG + ' Schede tecniche ingredienti</a>'
-          : '<span class="scheda-link" style="color:#ddd;cursor:default;">' + ICON_SVG + ' Schede tecniche ingredienti</span>';
+          ? '<a href="' + schedaUrl + '" class="scheda-link">' + ICON_SVG + ' ' + etichettaScheda + '</a>'
+          : '<span class="scheda-link" style="color:#ddd;cursor:default;">' + ICON_SVG + ' ' + etichettaScheda + '</span>';
         html += '<div class="prod-item">';
         html += '<button class="prod-trigger" onclick="toggle(this)">';
-        html += '<div class="prod-left"><span class="prod-name">' + r.nome + '</span><span class="prod-tagline">' + (r.descrizione || '') + '</span></div>';
+        html += '<div class="prod-left"><span class="prod-name">' + (r.nome || '') + '</span><span class="prod-tagline">' + campo(r, 'descrizione') + '</span></div>';
         html += '<span class="prod-arrow">&#8964;</span>';
         html += '</button>';
         html += '<div class="prod-body">';
         html += '<p class="prod-ingredienti">' + ingredienti + '</p>';
         html += schedaHtml;
         html += '<table class="prezzi-table"><thead><tr>';
-        html += '<th>Assaggino</th>';
-        html += '<th>Confezione</th>';
-        html += '<th>Sfuso €/etto &lt; 1 kg<span class="th-sub">MOQ 200 g</span></th>';
-        html += '<th>Sfuso €/kg ≥ 1 kg<span class="th-sub">MOQ 1 kg</span></th>';
+        html += '<th>' + T('tab.assaggino', 'Assaggino') + '</th>';
+        html += '<th>' + T('tab.confezione', 'Confezione') + '</th>';
+        html += '<th>' + T('tab.sfuso.etto', 'Sfuso \u20ac/etto &lt; 1 kg') +
+                '<span class="th-sub">' + T('tab.moq200', 'MOQ 200 g') + '</span></th>';
+        html += '<th>' + T('tab.sfuso.kg', 'Sfuso \u20ac/kg \u2265 1 kg') +
+                '<span class="th-sub">' + T('tab.moq1kg', 'MOQ 1 kg') + '</span></th>';
         html += '</tr></thead><tbody><tr>';
         html += '<td>' + assaggino + '</td><td>' + confezione + '</td><td>' + sfusoSotto + '</td><td>' + sfusoSopra + '</td>';
         html += '</tr></tbody></table>';
@@ -1014,7 +1294,7 @@
       if (notaTracce) {
         html += '<div class="prod-item">';
         html += '<button class="prod-trigger" onclick="toggle(this)">';
-        html += '<div class="prod-left"><span class="prod-name">Allergeni</span></div>';
+        html += '<div class="prod-left"><span class="prod-name">' + T('tab.allergeni', 'Allergeni') + '</span></div>';
         html += '<span class="prod-arrow">&#8964;</span>';
         html += '</button>';
         html += '<div class="prod-body">';
@@ -1036,7 +1316,8 @@
       .then(function(text) { buildListino(parseCSV(text)); })
       .catch(function(err) {
         document.getElementById('listino').innerHTML =
-          '<p class="error">Impossibile caricare i dati.<br><small>' + err.message + '</small></p>';
+          '<p class="error">' + T('listino.errore', 'Impossibile caricare i dati.') +
+          '<br><small>' + err.message + '</small></p>';
       });
   </script>
   <script>
@@ -1046,7 +1327,9 @@
     var STORE_CONFIG = {
       sheetCsvUrl: "https://docs.google.com/spreadsheets/d/177aQiUIjBnkRP2xQ-PXosnhq-38mvlOlIpkjArsFU2c/gviz/tq?tqx=out:csv",
       whatsappNumber: "393339386382",
-      whatsappMessage: "Ciao! Cerco Caramelle ma non ho trovato un punto vendita vicino a me, potete spedire?",
+      whatsappMessage: window.CV_LANG === 'en'
+        ? "Hello! I am looking for CaraMelle but I could not find a shop near me, can you ship?"
+        : "Ciao! Cerco Caramelle ma non ho trovato un punto vendita vicino a me, potete spedire?",
       nominatimUrl: "https://nominatim.openstreetmap.org/search",
       debounceMs: 600,
       // 3 e non 4: "Bra" è un comune, e ci hai un negozio.
@@ -1166,7 +1449,11 @@
       return 'https://wa.me/' + STORE_CONFIG.whatsappNumber + '?text=' + encodeURIComponent(STORE_CONFIG.whatsappMessage);
     }
     function storeCardHtml(store, distanceKm) {
-      var dist = distanceKm !== null ? (distanceKm < 1 ? Math.round(distanceKm * 1000) + ' m' : distanceKm.toFixed(1).replace('.', ',') + ' km') : '';
+      var dist = distanceKm !== null
+        ? (distanceKm < 1
+            ? Math.round(distanceKm * 1000) + ' m'
+            : (window.CV_LANG === 'en' ? distanceKm.toFixed(1) : distanceKm.toFixed(1).replace('.', ',')) + ' km')
+        : '';
       var href = store.mapsLink || ('https://www.google.com/maps/search/?api=1&query=' + store.lat + ',' + store.lng);
       return '' +
         '<li>' +
@@ -1204,7 +1491,8 @@
         itemsHtml += storeCardHtml(resultsDistantQueue[i], resultsDistantQueue[i]._dist);
       }
       if (resultsDistantIndex < resultsDistantQueue.length) {
-        itemsHtml += '<li class="store-distant-label" onclick="revealNextDistantStore()">Un poco più lontano</li>';
+        itemsHtml += '<li class="store-distant-label" onclick="revealNextDistantStore()">' +
+                     T('dove.lontano', 'Un poco più lontano') + '</li>';
       }
       resultsSection.innerHTML =
         '<ul class="store-results">' + itemsHtml + '</ul>';
@@ -1230,22 +1518,25 @@
     function renderStoreError(cityLabel, nearest) {
       var nearestHtml = nearest
         ? (
-            '<div class="store-empty-nearest-label">Il negozio più vicino è:</div>' +
+            '<div class="store-empty-nearest-label">' + T('dove.vicino', 'Il negozio più vicino è:') + '</div>' +
             '<ul class="store-results">' + storeCardHtml(nearest.store, nearest.dist) + '</ul>'
           )
         : '';
       resultsSection.innerHTML =
         '<div class="store-empty">' +
-          '<p>A ' + storeEscapeHtml(storeCapitalize(cityLabel)) + ' non ci siamo ancora arrivati!</p>' +
+          '<p>' + (window.CV_LANG === 'en'
+              ? 'We have not made it to ' + storeEscapeHtml(storeCapitalize(cityLabel)) + ' yet!'
+              : 'A ' + storeEscapeHtml(storeCapitalize(cityLabel)) + ' non ci siamo ancora arrivati!') + '</p>' +
         '</div>' +
         nearestHtml +
         '<div class="store-empty" style="padding-top:' + (nearest ? '20px' : '12px') + ';">' +
-          '<p><a class="store-link" href="' + storeWhatsappUrl() + '" target="_blank" rel="noopener">Scrivimi però che possiamo spedire</a></p>' +
+          '<p><a class="store-link" href="' + storeWhatsappUrl() + '" target="_blank" rel="noopener">' +
+          T('dove.spedisco', 'Scrivimi però che possiamo spedire') + '</a></p>' +
         '</div>';
     }
     function runStoreSearch(city) {
       var seq = ++searchSeq;
-      searchStatus.textContent = 'Cerco…';
+      searchStatus.textContent = T('dove.cerco', 'Cerco…');
       (storesLoaded ? Promise.resolve(ALL_STORES) : loadStores())
         .then(function(stores) {
           ALL_STORES = stores;
@@ -1280,7 +1571,8 @@
               renderStoreError(city);
             }
           } else {
-            renderStoreResults(matches, geo.lat, geo.lng, 'Negozi in provincia di ' + (geo.provincia || city), city);
+            renderStoreResults(matches, geo.lat, geo.lng,
+              T('dove.provincia', 'Negozi in provincia di') + ' ' + (geo.provincia || city), city);
           }
         })
         .catch(function(err) {
@@ -1349,6 +1641,8 @@
 
       var MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
                   'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+      var MESI_EN = ['January', 'February', 'March', 'April', 'May', 'June',
+                     'July', 'August', 'September', 'October', 'November', 'December'];
 
       function esc(s) {
         var d = document.createElement('div');
@@ -1387,6 +1681,7 @@
 
       function quando(inizio, fine) {
         var g1 = aMezzanotte(inizio), g2 = aMezzanotte(fine);
+        if (window.CV_LANG === 'en') return quandoEn(g1, g2);
         if (g1.getTime() === g2.getTime()) {
           return ilG(g1.getDate()) + ' ' + MESI[g1.getMonth()] + conAnno(g1);
         }
@@ -1397,9 +1692,28 @@
                ' ' + alG(g2.getDate()) + ' ' + MESI[g2.getMonth()] + conAnno(g2);
       }
 
+      // L'inglese non ha elisioni né il 1º: i giorni restano numeri nudi,
+      // e il mese si nomina una volta sola quando l'intervallo non lo cambia.
+      function quandoEn(g1, g2) {
+        if (g1.getTime() === g2.getTime()) {
+          return 'on ' + g1.getDate() + ' ' + MESI_EN[g1.getMonth()] + conAnno(g1);
+        }
+        if (g1.getMonth() === g2.getMonth() && g1.getFullYear() === g2.getFullYear()) {
+          return 'from ' + g1.getDate() + ' to ' + g2.getDate() + ' ' +
+                 MESI_EN[g2.getMonth()] + conAnno(g2);
+        }
+        return 'from ' + g1.getDate() + ' ' + MESI_EN[g1.getMonth()] + conAnno(g1) +
+               ' to ' + g2.getDate() + ' ' + MESI_EN[g2.getMonth()] + conAnno(g2);
+      }
+
+      // Italiano sulle 24 ore ("9", "9:30"), inglese sulle 12 con am/pm.
       function ora(d) {
-        var m = d.getMinutes();
-        return d.getHours() + (m ? ':' + (m < 10 ? '0' + m : m) : '');
+        var h = d.getHours(), m = d.getMinutes();
+        var min = m ? ':' + (m < 10 ? '0' + m : m) : '';
+        if (window.CV_LANG === 'en') {
+          return (h % 12 === 0 ? 12 : h % 12) + min + (h < 12 ? 'am' : 'pm');
+        }
+        return h + min;
       }
 
       // Google restituisce il luogo come indirizzo intero preso dalla mappa
@@ -1491,7 +1805,8 @@
         ].concat(righe, [
           'SUMMARY:' + icsEsc(evento.summary + ' — CaraMelle'),
           'LOCATION:' + icsEsc(evento.location || ''),
-          'DESCRIPTION:' + icsEsc('Mi trovi qui con CaraMelle — confetteria di valle.\nhttps://www.confetteriadivalle.it'),
+          'DESCRIPTION:' + icsEsc(T('fiera.ics.desc', 'Mi trovi qui con CaraMelle — confetteria di valle.') +
+                                  '\nhttps://www.confetteriadivalle.it'),
           'STATUS:CONFIRMED',
           'BEGIN:VALARM',
           // Con un orario preciso bastano due ore; per una fiera di giornata
@@ -1536,16 +1851,22 @@
         var q;
         if (inCorso && unGiorno) {
           // "Oggi mi trovi a … oggi" non si può leggere: resta solo l'orario
-          q = haOrario ? 'dalle ' + ora(inizio) + ' alle ' + ora(fine) : '';
+          q = haOrario
+            ? T('fiera.dalle', 'dalle') + ' ' + ora(inizio) + ' ' + T('fiera.alle', 'alle') + ' ' + ora(fine)
+            : '';
         } else {
           q = quando(inizio, fine);
-          if (haOrario && unGiorno) q += ', dalle ' + ora(inizio) + ' alle ' + ora(fine);
+          if (haOrario && unGiorno) {
+            q += ', ' + T('fiera.dalle', 'dalle') + ' ' + ora(inizio) +
+                 ' ' + T('fiera.alle', 'alle') + ' ' + ora(fine);
+          }
         }
         if (q) pezzi.push('<span class="fiera-quando">' + q + '</span>');
 
         var apertura = inCorso
-          ? (unGiorno ? 'Oggi sono in fiera ' : 'In questi giorni sono in fiera ')
-          : 'Sarò in fiera ';
+          ? (unGiorno ? T('fiera.oggi', 'Oggi sono in fiera ')
+                      : T('fiera.giorni', 'In questi giorni sono in fiera '))
+          : T('fiera.futuro', 'Sarò in fiera ');
 
         var ics = new Blob([costruisciIcs(evento, inizio, fine, haOrario)],
                            { type: 'text/calendar;charset=utf-8' });
@@ -1553,7 +1874,8 @@
         riga.innerHTML = apertura +
           '<a class="fiera-ics" href="' + URL.createObjectURL(ics) +
           '" download="' + nomeFile(evento.summary) +
-          '" title="Aggiungi al tuo calendario">' + pezzi.join(' — ') + '</a>';
+          '" title="' + T('fiera.calendario', 'Aggiungi al tuo calendario') + '">' +
+          pezzi.join(' — ') + '</a>';
         riga.hidden = false;
       }
 
@@ -1563,9 +1885,9 @@
       function nessunaFiera() {
         var golosone = document.getElementById('golosoneRiga');
         if (golosone) golosone.hidden = true;
-        riga.innerHTML = 'Per ora non ho fiere in programma, ma unisciti al gruppo ' +
+        riga.innerHTML = T('fiera.nessuna', 'Per ora non ho fiere in programma, ma unisciti al gruppo ') +
           '<a class="fiera-link" href="' + LINK_GOLOSONE + '" target="_blank" rel="noopener">Golosone!</a>' +
-          ' per restare aggiornato';
+          T('fiera.nessuna.coda', ' per restare aggiornato');
         riga.hidden = false;
       }
 
@@ -1593,6 +1915,64 @@
           console.warn('Prossima fiera non disponibile:', err.message);
         });
     })();
+  </script>
+
+  <script>
+  /* ════════════════════════════════════════════
+     INVITO ALLA VERSIONE INGLESE
+
+     Stessa idea del banner di Humus: compare solo a chi ha il browser
+     in una lingua diversa dall'italiano e sta guardando la pagina in
+     italiano, e una volta chiuso tace per cinque ore.
+
+     Il testo è in inglese fisso e non passa da T(): chi lo legge ha la
+     pagina in italiano, quindi T() gli risponderebbe in italiano.
+     ════════════════════════════════════════════ */
+  (function () {
+    'use strict';
+
+    var SILENZIO_MS = 5 * 60 * 60 * 1000;   // cinque ore
+    var CHIAVE = 'cv_invito_lingua';
+
+    if (window.CV_LANG !== 'it') return;
+
+    // navigator.language è la lingua del browser, non del paese: un
+    // italiano all'estero non se lo vede, e va bene così.
+    var suo = (navigator.language || '').toLowerCase();
+    if (!suo || suo.indexOf('it') === 0) return;
+
+    try {
+      var quando = parseInt(localStorage.getItem(CHIAVE), 10);
+      if (quando && (Date.now() - quando) < SILENZIO_MS) return;
+    } catch (e) { /* localStorage negato: il banner si rivede, pazienza */ }
+
+    function zitto() {
+      try { localStorage.setItem(CHIAVE, String(Date.now())); } catch (e) {}
+      invito.classList.remove('cv-visibile');
+      setTimeout(function () { invito.remove(); }, 300);
+    }
+
+    var invito = document.createElement('div');
+    invito.className = 'cv-invito-lingua';
+    invito.setAttribute('role', 'region');
+    invito.setAttribute('aria-label', 'Language');
+    invito.innerHTML =
+      '<span class="cv-testo">This page is also available in English.</span>' +
+      '<button type="button" class="cv-si">Read in English</button>' +
+      '<button type="button" class="cv-no">No thanks</button>';
+
+    invito.querySelector('.cv-si').addEventListener('click', function () {
+      try { localStorage.setItem(CHIAVE, String(Date.now())); } catch (e) {}
+      location.search = 'lang=en';
+    });
+    invito.querySelector('.cv-no').addEventListener('click', zitto);
+
+    document.body.appendChild(invito);
+    // Un giro di rendering prima della classe, se no la transizione non parte
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { invito.classList.add('cv-visibile'); });
+    });
+  })();
   </script>
 </body>
 </html>

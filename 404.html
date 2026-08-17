@@ -111,9 +111,44 @@
   </div>
 
   <div class="testo">
-    <p class="titolo">Non si atterra sempre nel luogo giusto</p>
-    <p class="sotto">torna su <a href="https://www.confetteriadivalle.it">confetteriadivalle.it</a></p>
+    <p class="titolo" data-i18n="titolo">Non si atterra sempre nel luogo giusto</p>
+    <p class="sotto"><span data-i18n="torna">torna su</span> <a id="cvSu" href="https://www.confetteriadivalle.it">confetteriadivalle.it</a></p>
   </div>
+
+
+  <!-- ═══ LINGUA ═══
+       Tre stringhe. Una 404 può capitare a chi arrivava da un indirizzo
+       in inglese, quindi la lingua si legge dall'ultima scelta salvata
+       (?lang= qui non c'è quasi mai: l'indirizzo sbagliato è un altro). -->
+  <script>
+  (function () {
+    var EN = {
+      'titolo': 'You do not always land where you meant to',
+      'torna':  'back to',
+      'meta':   'Page not found \u2013 CaraMelle'
+    };
+
+    var lang = 'it';
+    try {
+      var chiesta = new URLSearchParams(location.search).get('lang');
+      var browserStraniero = (navigator.language || '').toLowerCase().indexOf('it') !== 0;
+      if (chiesta === 'en' || chiesta === 'it') lang = chiesta;
+      else if (browserStraniero && localStorage.getItem('cv_lang') === 'en') lang = 'en';
+    } catch (e) {}
+
+    document.documentElement.lang = lang;
+    if (lang !== 'en') return;
+
+    document.title = EN.meta;
+    var nodi = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodi.length; i++) {
+      var v = EN[nodi[i].getAttribute('data-i18n')];
+      if (v) nodi[i].textContent = v;
+    }
+    var su = document.getElementById('cvSu');
+    if (su) su.setAttribute('href', 'https://www.confetteriadivalle.it/?lang=en');
+  })();
+  </script>
 
 </body>
 </html>
