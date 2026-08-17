@@ -410,47 +410,90 @@
     #sez-filiera, #sez-listino, #sez-dove { scroll-margin-top: 80px; }
 
     /* ── INVITO ALLA VERSIONE INGLESE ──
-       Compare in basso solo a chi ha il browser in un'altra lingua e
-       sta leggendo l'italiano. Si toglie di mezzo per cinque ore. */
+       Velo su tutta la pagina, non più una barra in basso: chi ha il
+       browser in un'altra lingua deve accorgersene, non scoprirlo.
+       Compare solo su pagina italiana e si toglie di mezzo per cinque ore.
+
+       Il bianco al 40% da solo lascia passare il testo della pagina e
+       rende la scritta illeggibile: la sfocatura dietro è quello che la
+       fa staccare, ed è la stessa dei pop-up del gestionale. Dove il
+       backdrop-filter non c'è, il velo sale al 75% (regola più sotto). */
     .cv-invito-lingua {
       position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%) translateY(12px);
-      z-index: 9997;
+      inset: 0;
+      /* Sopra la barra (9999) e l'overlay del menù (9998): è una scelta
+         da prendere, e ricaricando a pagina scrollata la barra fissa
+         sbucherebbe sopra il velo. */
+      z-index: 10000;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 16px;
-      max-width: calc(100vw - 32px);
-      padding: 12px 18px;
-      background: #fff;
-      border: 1px solid #ececec;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.08);
-      font-size: 13px;
-      color: var(--text);
+      justify-content: center;
+      gap: 34px;
+      padding: 32px 24px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.4);
+      -webkit-backdrop-filter: blur(7px);
+      backdrop-filter: blur(7px);
       opacity: 0;
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      transition: opacity 0.35s ease;
     }
-    .cv-invito-lingua.cv-visibile { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .cv-invito-lingua.cv-visibile { opacity: 1; }
+
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .cv-invito-lingua { background: rgba(255, 255, 255, 0.75); }
+    }
+
+    /* Raleway 300 in corpo grande: la stessa voce della presentazione
+       di Simona, non un avviso di sistema. */
+    .cv-invito-lingua .cv-testo {
+      font-size: clamp(26px, 5.2vw, 44px);
+      font-weight: 300;
+      line-height: 1.22;
+      letter-spacing: -0.005em;
+      color: var(--text);
+      max-width: 15ch;
+      text-wrap: balance;
+      margin: 0;
+    }
+
+    .cv-invito-lingua .cv-scelte {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
     .cv-invito-lingua button {
       font-family: inherit;
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
       border: none;
       background: none;
       padding: 0;
       cursor: pointer;
-      white-space: nowrap;
-      transition: color 0.2s ease;
+      transition: color 0.2s ease, border-color 0.2s ease;
     }
-    .cv-invito-lingua .cv-si { color: var(--orange); font-weight: 600; }
-    .cv-invito-lingua .cv-si:hover { color: #000; }
-    .cv-invito-lingua .cv-no { color: #b0b0b0; }
+    .cv-invito-lingua .cv-si {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--orange);
+      padding-bottom: 7px;
+      border-bottom: 2px solid var(--orange);
+    }
+    .cv-invito-lingua .cv-si:hover { color: #000; border-bottom-color: #000; }
+    .cv-invito-lingua .cv-no {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: #a8a49e;
+    }
     .cv-invito-lingua .cv-no:hover { color: var(--text); }
-    @media (max-width: 520px) {
-      .cv-invito-lingua { flex-wrap: wrap; gap: 10px 14px; font-size: 12.5px; }
-      .cv-invito-lingua .cv-testo { flex: 1 0 100%; }
+
+    /* Blocca lo scorrimento sotto al velo */
+    body.cv-invito-aperto { overflow: hidden; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cv-invito-lingua { transition: none; }
     }
 
     /* ── HEADER ── */
@@ -1946,28 +1989,34 @@
       if (quando && (Date.now() - quando) < SILENZIO_MS) return;
     } catch (e) { /* localStorage negato: il banner si rivede, pazienza */ }
 
-    function zitto() {
+    function ricorda() {
       try { localStorage.setItem(CHIAVE, String(Date.now())); } catch (e) {}
+    }
+
+    function zitto() {
+      ricorda();
+      document.body.classList.remove('cv-invito-aperto');
       invito.classList.remove('cv-visibile');
-      setTimeout(function () { invito.remove(); }, 300);
+      setTimeout(function () { invito.remove(); }, 350);
     }
 
     var invito = document.createElement('div');
     invito.className = 'cv-invito-lingua';
-    invito.setAttribute('role', 'region');
-    invito.setAttribute('aria-label', 'Language');
     invito.innerHTML =
-      '<span class="cv-testo">This page is also available in English.</span>' +
-      '<button type="button" class="cv-si">Read in English</button>' +
-      '<button type="button" class="cv-no">No thanks</button>';
+      '<p class="cv-testo">This page is also available in English.</p>' +
+      '<div class="cv-scelte">' +
+        '<button type="button" class="cv-si">Read in English</button>' +
+        '<button type="button" class="cv-no">No thanks, I want to learn Italian</button>' +
+      '</div>';
 
     invito.querySelector('.cv-si').addEventListener('click', function () {
-      try { localStorage.setItem(CHIAVE, String(Date.now())); } catch (e) {}
+      ricorda();
       location.search = 'lang=en';
     });
     invito.querySelector('.cv-no').addEventListener('click', zitto);
 
     document.body.appendChild(invito);
+    document.body.classList.add('cv-invito-aperto');
     // Un giro di rendering prima della classe, se no la transizione non parte
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { invito.classList.add('cv-visibile'); });
