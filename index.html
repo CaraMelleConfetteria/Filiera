@@ -1145,12 +1145,16 @@
       'denominazione': 'descrizione',
       'ingredienti': 'ingredienti',
       'schede tecniche ingredienti': 'url_scheda',
-      'assaggino_prezzo': 'assaggino_prezzo',
       'assaggino_grammi': 'assaggino_grammi',
-      'confezione_prezzo': 'confezione_prezzo',
       'confezione_grammi': 'confezione_grammi',
-      'sfuso_etto_kg': 'sfuso_sotto_prezzo',
-      'sfuso_sopra_kg': 'sfuso_sopra_prezzo',
+
+      // I prezzi hanno il prefisso della fascia: il Foglio tiene accanto
+      // quelli al pubblico e quelli all'ingrosso, che servono al gestionale.
+      // Il sito guarda solo i PRIVATI_; le colonne HORECA_ le ignora.
+      'privati_assaggino_prezzo': 'assaggino_prezzo',
+      'privati_confezione_prezzo': 'confezione_prezzo',
+      'privati_sfuso_etto_kg': 'sfuso_sotto_prezzo',
+      'privati_sfuso_sopra_kg': 'sfuso_sopra_prezzo',
       'pubblicato': 'pubblicato',
       // Colonne inglesi: facoltative, e sono solo due. Il NOME del prodotto
       // non si traduce mai (Ghiaie, Bisou, Brisetti sono nomi propri) e la
