@@ -41,7 +41,7 @@
       'meta.titolo':  'Supply chain & price list – Confetteria di Valle',
       'bio.1':        'My name is Simona Carbone, but everyone knows me as CaraMelle.',
       'bio.2':        'I opened my workshop in Melle, in the Varaita Valley near Cuneo, choosing to devote myself entirely to the art of confectionery.<br>Here I found a place I could call home, and that is why I chose this name as a tribute to the community that welcomed me, because to me confectionery is a bond and an expression of the place where I live.',
-      'bio.3':        'I work only with what this land produces, giving it a new form, in search of a flavour that tells the story of these valleys.',
+      'bio.3':        'I work only with what this land produces, giving it a new form, in search of a flavour that captures the soul of these valleys.',
       'quota.frase':  '"Transparency is the most honest form of communication"',
       'quota.sotto':  'Here are the people my ingredients come from,<br>because without them all of this would be far harder.',
 
@@ -170,6 +170,14 @@
           var v = EN[nodi[i].getAttribute(attr)];
           if (v !== undefined && v !== '') scrivi(nodi[i], v);
         }
+      }
+
+      /* data-i18n-href non porta una chiave: porta già l'indirizzo da
+         usare in inglese. Serve alla cartella stampa, che in inglese è
+         un altro archivio su Drive — quello col brief tradotto. */
+      var altroLink = document.querySelectorAll('[data-i18n-href]');
+      for (var k = 0; k < altroLink.length; k++) {
+        altroLink[k].setAttribute('href', altroLink[k].getAttribute('data-i18n-href'));
       }
 
       /* I collegamenti interni si portano dietro la lingua, così un
@@ -868,7 +876,8 @@
       <li><a href="#sez-dove" data-i18n="nav.dove">Dove trovarci</a></li>
       <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener" data-sez="sez-contatti" data-i18n="nav.scrivimi">Scrivimi</a></li>
       <li><a href="https://drive.google.com/uc?export=download&amp;id=1OPxF3xcLbTl0ZN1L2m90Fe-t70l3OLB7"
-             target="_blank" rel="noopener" data-i18n="nav.stampa">Cartella stampa</a></li>
+             target="_blank" rel="noopener" data-i18n="nav.stampa"
+             data-i18n-href="https://drive.google.com/uc?export=download&amp;id=1QJofm-BPa1oF7wFUZjIDU8PGgdko4xvL">Cartella stampa</a></li>
     </ul>
     <button class="cv-btn-navbar" id="cvNavToggle" type="button"
             aria-expanded="false" aria-controls="cvNavMobile"
@@ -882,7 +891,8 @@
       <li><a href="#sez-dove" data-i18n="nav.dove">Dove trovarci</a></li>
       <li><a href="https://wa.me/393339386382" target="_blank" rel="noopener" data-sez="sez-contatti" data-i18n="nav.scrivimi">Scrivimi</a></li>
       <li><a href="https://drive.google.com/uc?export=download&amp;id=1OPxF3xcLbTl0ZN1L2m90Fe-t70l3OLB7"
-             target="_blank" rel="noopener" data-i18n="nav.stampa">Cartella stampa</a></li>
+             target="_blank" rel="noopener" data-i18n="nav.stampa"
+             data-i18n-href="https://drive.google.com/uc?export=download&amp;id=1QJofm-BPa1oF7wFUZjIDU8PGgdko4xvL">Cartella stampa</a></li>
     </ul>
   </div>
 
