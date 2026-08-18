@@ -1155,7 +1155,7 @@
       'privati_confezione_prezzo': 'confezione_prezzo',
       'privati_sfuso_etto_kg': 'sfuso_sotto_prezzo',
       'privati_sfuso_sopra_kg': 'sfuso_sopra_prezzo',
-      'pubblicato': 'pubblicato',
+      'sito': 'sito',
       // Colonne inglesi: facoltative, e sono solo due. Il NOME del prodotto
       // non si traduce mai (Ghiaie, Bisou, Brisetti sono nomi propri) e la
       // CATEGORIA sta nel dizionario qui sopra, non nel Foglio.
@@ -1187,7 +1187,7 @@
         // la riga NOTE passa sempre, indipendentemente da PUBBLICATO
         if (obj.categoria && obj.categoria.toLowerCase() === 'note') {
           rows.push(obj);
-        } else if (obj.pubblicato && obj.pubblicato.toUpperCase() === 'TRUE') {
+        } else if (obj.sito && obj.sito.toUpperCase() === 'TRUE') {
           rows.push(obj);
         }
       }
