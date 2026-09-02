@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Confetteria di Valle - Vendite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+touch-action: manipulation;
+}
+
+body {
+font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+background: #fafafa;
+color: #1a1a1a;
+line-height: 1.5;
+}
+
+.container {
+max-width: 800px;
+margin: 0 auto;
+padding: 20px;
+}
+
+/* Logo Header */
+.logo-header {
+margin-bottom: 40px;
+text-align: center;
+}
+
+/* Il logo arriva da fattura_logo.gs, lo stesso PNG che finisce sulla fattura:
+   una sola immagine per tutto il gestionale, niente doppioni da tenere
+   allineati.
+
+   Il PNG è appiattito su bianco — serve così sulla fattura, dove la pagina è
+   bianca — e sullo sfondo grigio della cassa si vedeva il rettangolo. Invece
+   di rifare l'immagine, che è condivisa, la si fonde in moltiplicazione: il
+   bianco sparisce nello sfondo e resta solo il tratto nero. Se un domani si
+   volesse un fondo scuro, allora sì che andrebbe rifatto il PNG col
+   trasparente. */
+.logo-cornice {
+width: 500px;
+max-width: 90%;
+margin: 44px auto 0;
+}
+
+.logo-caramelle {
+display: block;
+width: 100%;
+height: auto;
+mix-blend-mode: multiply;
+/* Il PNG porta dentro di sé un bordo bianco enorme: il disegno sta fra y 108
+   e y 226 di 337px, cioè un terzo vuoto sopra e un terzo sotto. Era quello a
+   scavare il buco fino al sottotitolo, non il margine.
+   Il 32,6% dell'altezza vale il 21% della larghezza, ed è quello che si
+   recupera qui. In percentuale, non in pixel, perché i margini in % si
+   misurano sulla larghezza del contenitore — che è la cornice qui sopra,
+   larga quanto l'immagine — e così il conto regge a qualsiasi dimensione,
+   telefono compreso. Ne lascio un filo, per non incollare le due cose. */
+margin-bottom: -18%;
+}
+
+/* Il nome della pagina, non del negozio: quello lo dice il logo qui sopra.
+   Perciò sta sotto, piccolo e in grigio — dice dove sei, non chi sei. */
+.main-title {
+font-size: 0.85rem;
+font-weight: 500;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+color: #999;
+text-align: center;
+/* Il -18% qui sopra riporta il sottotitolo a filo del disegno; questi 15px
+   sono l'aria che ci si vuole in mezzo. Due cose diverse, due regole diverse:
+   quella scala con l'immagine, questa no. */
+margin: 15px 0 0;
+}
+
+/* Type Selection */
+.type-selection {
+display: flex;
+flex-direction: column;
+gap: 16px;
+margin-bottom: 40px;
+justify-content: center;
+align-items: center;
+min-height: 60vh;
+}
+
+.type-button {
+background: white;
+border: 2px solid #e5e5e5;
+border-radius: 12px;
+padding: 32px 24px;
+text-align: center;
+cursor: pointer;
+transition: all 0.2s ease;
+font-family: inherit;
+font-size: 1rem;
+width: 300px;
+max-width: 90%;
+}
+
+.type-button:hover {
+border-color: #ff8c42;
+background: #fafafa;
+}
+
+.type-button h3 {
+font-size: 1.2rem;
+font-weight: 600;
+margin-bottom: 8px;
+color: #1a1a1a;
+}
+
+.type-button p {
+color: #666;
+font-size: 0.9rem;
+}
+
+/* Main Form */
+.main-form {
+background: white;
+border-radius: 16px;
+padding: 32px;
+border: 1px solid #e5e5e5;
+}
+
+.form-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 32px;
+padding-bottom: 16px;
+border-bottom: 1px solid #e5e5e5;
+}
+
+.form-title h2 {
+font-size: 1.5rem;
+font-weight: 600;
+color: #1a1a1a;
+}
+
+.back-button {
+background: #f5f5f5;
+border: none;
+padding: 8px 16px;
+border-radius: 8px;
+cursor: pointer;
+font-size: 0.9rem;
+color: #666;
+transition: all 0.2s ease;
+}
+
+.back-button:hover {
+background: #e5e5e5;
+}
+
+/* Form Groups */
+.form-group {
+margin-bottom: 24px;
+}
+
+.form-group label {
+display: block;
+margin-bottom: 8px;
+font-weight: 500;
+color: #1a1a1a;
+font-size: 0.9rem;
+}
+
+.form-control {
+width: 100%;
+padding: 12px 16px;
+border: 2px solid #e5e5e5;
+border-radius: 8px;
+font-size: 1rem;
+transition: border-color 0.2s ease;
+background: white;
+}
+
+.form-control:focus {
+outline: none;
+border-color: #1a1a1a;
+}
+
+/* Cash Section */
+
+.cash-section {
+display: flex;
+flex-direction: column;
+gap: 16px;
+margin-top: 12px;
+}
+
+.cash-section .form-control {
+flex: 1;
+}
+
+.resto-display {
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 12px 16px;
+background: white;
+border: 2px solid #e5e5e5;
+border-radius: 8px;
+font-weight: 400;
+color: #999;
+min-height: 64px;
+font-size: 1.3rem;
+}
+
+
+.resto-display.positive {
+background: #d4edda;
+border-color: #c3e6cb;
+color: #155724;
+font-weight: 600;
+}
+
+.resto-display.negative {
+background: #f8d7da;
+border-color: #f5c6cb;
+color: #721c24;
+font-weight: 600;
+}
+
+/* Payment Button Style */
+.payment-button {
+padding: 16px;
+background: #fafafa;
+border: 1px solid #e5e5e5;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.2s ease;
+font-family: inherit;
+font-size: 1rem;
+display: flex;
+align-items: center;
+justify-content: center;
+min-height: 56px;
+}
+
+.payment-button:hover {
+background: #f0f0f0;
+}
+
+.payment-button:active {
+animation: pulse 0.2s ease;
+}
+
+.payment-button.selected {
+background: #ff8c42;
+border-color: #ff8c42;
+}
+
+.payment-button.selected .payment-name {
+color: white;
+}
+
+.payment-name {
+font-weight: 500;
+color: #1a1a1a;
+font-size: 1rem;
+}
+
+/* Checkbox */
+.checkbox-group {
+display: flex;
+gap: 24px;
+margin-top: 12px;
+}
+
+.checkbox-item {
+display: flex;
+align-items: center;
+gap: 8px;
+cursor: pointer;
+}
+
+.checkbox-item input[type="checkbox"] {
+width: 18px;
+height: 18px;
+cursor: pointer;
+accent-color: #ff8c42;
+border-radius: 50%;
+appearance: none;
+border: 2px solid #e5e5e5;
+background: white;
+position: relative;
+transition: all 0.2s ease;
+}
+
+.checkbox-item input[type="checkbox"]:checked {
+background: #ff8c42;
+border-color: #ff8c42;
+}
+
+.checkbox-item input[type="checkbox"]:checked::after {
+content: '✓';
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+color: white;
+font-size: 12px;
+font-weight: bold;
+}
+
+.checkbox-item label {
+margin: 0;
+cursor: pointer;
+font-size: 0.9rem;
+}
+
+/* Product Sections */
+.product-section {
+margin: 32px 0;
+}
+
+.section-title {
+font-size: 1.1rem;
+font-weight: 600;
+color: #1a1a1a;
+margin-bottom: 16px;
+padding: 12px 0;
+border-bottom: 1px solid #e5e5e5;
+}
+
+.products-grid {
+display: grid;
+gap: 12px;
+}
+
+/* Product Item */
+.product-item {
+display: flex;
+align-items: stretch;
+border-radius: 8px;
+border: 1px solid #e5e5e5;
+overflow: hidden;
+}
+
+.product-clickable {
+flex: 1;
+padding: 16px;
+background: #fafafa;
+cursor: pointer;
+transition: all 0.2s ease;
+border: none;
+text-align: left;
+font-family: inherit;
+display: flex;
+align-items: center;
+/* Tenendo premuto per far salire la quantità, iPad selezionerebbe il testo
+   e aprirebbe la lente con il menù «Copia». Qui è solo fastidio. */
+-webkit-touch-callout: none;
+-webkit-user-select: none;
+user-select: none;
+}
+
+.product-clickable:hover {
+background: #f0f0f0;
+}
+
+.product-clickable:active {
+animation: pulse 0.2s ease;
+}
+
+@keyframes pulse {
+0% { transform: scale(1); }
+50% { transform: scale(0.97); }
+100% { transform: scale(1); }
+}
+
+.product-clickable:focus {
+outline: none;
+}
+
+.product-clickable.selected {
+background: #ff8c42;
+}
+
+.product-clickable.selected .product-name {
+color: white;
+}
+
+.product-name {
+font-weight: 500;
+color: #1a1a1a;
+font-size: 1rem;
+}
+
+.quantity-section {
+display: flex;
+align-items: center;
+background: white;
+border-left: 1px solid #e5e5e5;
+padding-right: 12px;
+}
+
+.quantity-display {
+min-width: 60px;
+padding: 16px 20px;
+text-align: center;
+font-weight: 500;
+color: #1a1a1a;
+font-size: 1.1rem;
+background: white;
+border-left: 1px solid #e5e5e5;
+transition: all 0.2s ease;
+}
+
+.quantity-display.selected {
+color: #ff8c42;
+font-weight: 700;
+}
+
+.quantity-minus {
+cursor: pointer;
+font-size: 1.4rem;
+font-weight: 700;
+color: #ff8c42;
+opacity: 0;
+transform: scale(0.8);
+transition: all 0.2s ease;
+user-select: none;
+-webkit-touch-callout: none;
+-webkit-user-select: none;
+line-height: 1;
+}
+
+.quantity-minus.visible {
+opacity: 1;
+transform: scale(1);
+}
+
+.quantity-minus:hover {
+color: #e6782a;
+}
+
+/* Sfuso Product Item */
+.sfuso-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px;
+background: #fafafa;
+border-radius: 8px;
+border: 1px solid #e5e5e5;
+gap: 16px;
+transition: background-color 0.2s ease;
+}
+
+.sfuso-item.selected {
+background: #ff8c42;
+}
+
+.sfuso-item.selected .sfuso-name,
+.sfuso-item.selected .sfuso-price,
+.sfuso-item.selected .sfuso-calculated {
+color: white;
+}
+
+.sfuso-name-price {
+display: flex;
+align-items: center;
+gap: 8px;
+flex: 1;
+}
+
+.sfuso-name {
+font-weight: 500;
+color: #1a1a1a;
+font-size: 1rem;
+}
+
+.sfuso-price {
+font-size: 0.85rem;
+font-weight: 600;
+color: #666;
+}
+
+.sfuso-input-container {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.sfuso-calculated {
+font-size: 0.85rem;
+color: #999;
+font-weight: 500;
+min-width: 60px;
+text-align: right;
+}
+
+.sfuso-item.selected .sfuso-calculated {
+color: rgba(255, 255, 255, 0.9);
+}
+
+.sfuso-input {
+width: 100px;
+padding: 8px 12px;
+border: none;
+border-radius: 6px;
+text-align: center;
+font-size: 0.9rem;
+font-weight: 600;
+transition: all 0.2s ease;
+background: none;
+color: #1a1a1a;
+}
+
+.sfuso-input:focus {
+outline: none;
+}
+
+.sfuso-item.selected .sfuso-input {
+background: none;
+color: white;
+}
+
+.sfuso-item.selected .sfuso-input:focus {
+background: none;
+color: white;
+}
+
+.sfuso-item.selected .sfuso-input::placeholder {
+color: rgba(255, 255, 255, 0.7);
+}
+
+/* Remove spinner arrows from all number inputs */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+-webkit-appearance: none;
+margin: 0;
+}
+
+input[type=number] {
+-moz-appearance: textfield;
+}
+
+/* Accordion for Sfuso */
+.accordion {
+border: 1px solid #e5e5e5;
+border-radius: 8px;
+overflow: hidden;
+}
+
+.accordion summary {
+background: #e0e0e0;
+padding: 16px;
+cursor: pointer;
+list-style: none;
+font-weight: 500;
+transition: background-color 0.2s ease;
+position: relative;
+}
+
+.accordion summary:hover {
+background: #d0d0d0;
+}
+
+.accordion summary::before {
+content: '↓';
+color: black;
+font-size: 12px;
+font-weight: bold;
+margin-right: 10px;
+transition: transform 0.2s ease;
+}
+
+.accordion[open] summary::before {
+transform: rotate(180deg);
+}
+
+.accordion-content {
+padding: 16px;
+background: white;
+}
+
+/* Toggle Switch per PESO/IMPORTO */
+.toggle-container {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 12px;
+margin-bottom: 24px;
+padding: 16px;
+background: #f5f5f5;
+border-radius: 8px;
+}
+
+.toggle-label {
+font-weight: 500;
+color: #1a1a1a;
+font-size: 0.9rem;
+}
+
+.toggle-switch {
+position: relative;
+width: 60px;
+height: 30px;
+}
+
+.toggle-switch input {
+opacity: 0;
+width: 0;
+height: 0;
+}
+
+.toggle-slider {
+position: absolute;
+cursor: pointer;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background-color: #ccc;
+transition: 0.3s;
+border-radius: 30px;
+}
+
+.toggle-slider:before {
+position: absolute;
+content: "";
+height: 22px;
+width: 22px;
+left: 4px;
+bottom: 4px;
+background-color: white;
+transition: 0.3s;
+border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+background-color: #ff8c42;
+}
+
+input:checked + .toggle-slider:before {
+transform: translateX(30px);
+}
+
+/* Totals */
+.totals-section {
+background: #ff8c42;
+padding: 24px;
+border-radius: 12px;
+margin: 32px 0;
+text-align: center;
+}
+
+.totals-section h3 {
+font-size: 1.1rem;
+font-weight: 500;
+color: rgba(255, 255, 255, 0.9);
+margin-bottom: 8px;
+}
+
+.total-amount {
+font-size: 2rem;
+font-weight: 600;
+color: white;
+}
+
+.total-calculated {
+font-size: 1.2rem;
+color: rgba(255, 255, 255, 0.8);
+text-decoration: line-through;
+text-decoration-thickness: 1px;
+margin-bottom: 8px;
+}
+
+.total-custom-label {
+font-size: 1rem;
+color: rgba(255, 255, 255, 0.9);
+margin-bottom: 4px;
+}
+
+/* Submit Button */
+.submit-section {
+text-align: center;
+margin-top: 32px;
+}
+
+.submit-btn {
+background: #1a1a1a;
+color: white;
+border: none;
+padding: 16px 48px;
+font-size: 1rem;
+font-weight: 500;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+background: #333;
+transform: translateY(-1px);
+}
+
+.submit-btn:active:not(:disabled) {
+transform: translateY(0);
+}
+
+.submit-btn:disabled {
+background: #999;
+cursor: not-allowed;
+transform: none;
+}
+
+/* Submit Button Success State */
+.submit-btn.success {
+background: #28a745 !important;
+color: white !important;
+}
+
+.submit-btn.success:hover {
+background: #28a745 !important;
+transform: none !important;
+}
+
+/* Submit Button Error State */
+.submit-btn.error {
+background: #dc3545 !important;
+color: white !important;
+}
+
+.submit-btn.error:hover {
+background: #dc3545 !important;
+transform: none !important;
+}
+
+/* Submit Button Invite State */
+.submit-btn.invite {
+background: #28a745 !important;
+color: white !important;
+}
+
+.submit-btn.invite:hover:not(:disabled) {
+background: #218838 !important;
+}
+
+/* Response Messages */
+.response-message {
+margin-top: 24px;
+padding: 16px;
+border-radius: 8px;
+text-align: center;
+font-weight: 500;
+}
+
+.response-message.success {
+background: #d4edda;
+color: #155724;
+border: 1px solid #c3e6cb;
+}
+
+.response-message.error {
+background: #f8d7da;
+color: #721c24;
+border: 1px solid #f5c6cb;
+}
+
+/* Stili per la selezione prodotti */
+.product-selector {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 20px;
+background: #fafafa;
+border-radius: 8px;
+border: 1px solid #e5e5e5;
+margin-bottom: 8px;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+.product-selector:hover {
+background: #f0f0f0;
+transform: translateY(-1px);
+}
+
+.product-selector:active {
+animation: pulse 0.2s ease;
+}
+
+.product-selector.selected {
+background: #ff8c42;
+border-color: #ff8c42;
+transform: scale(1.02);
+}
+
+.product-selector.selected .product-selector-name,
+.product-selector.selected .product-selector-price {
+color: white;
+}
+
+.product-selector-name {
+font-weight: 500;
+color: #1a1a1a;
+font-size: 1.1rem;
+}
+
+.product-selector-price {
+font-size: 1rem;
+font-weight: 600;
+color: #666;
+}
+
+.sfuso-selector {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 20px;
+background: #fafafa;
+border-radius: 8px;
+border: 1px solid #e5e5e5;
+margin-bottom: 8px;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+.sfuso-selector:hover {
+background: #f0f0f0;
+transform: translateY(-1px);
+}
+
+.sfuso-selector:active {
+animation: pulse 0.2s ease;
+}
+
+.sfuso-selector.selected {
+background: #ff8c42;
+border-color: #ff8c42;
+transform: scale(1.02);
+}
+
+.sfuso-selector.selected .sfuso-selector-name,
+.sfuso-selector.selected .sfuso-selector-price {
+color: white;
+}
+
+.sfuso-selector-name {
+font-weight: 500;
+color: #1a1a1a;
+font-size: 1.1rem;
+}
+
+.sfuso-selector-price {
+font-size: 1rem;
+font-weight: 600;
+color: #666;
+}
+
+/* Success Overlay */
+.success-overlay {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.7);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 9999;
+opacity: 0;
+transition: opacity 0.3s ease;
+}
+
+.success-overlay.show {
+opacity: 1;
+}
+
+.success-overlay-content {
+background: white;
+padding: 32px;
+border-radius: 16px;
+max-width: 500px;
+width: 90%;
+max-height: 80vh;
+overflow-y: auto;
+box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+position: relative;
+animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+from {
+transform: translateY(-50px);
+opacity: 0;
+}
+to {
+transform: translateY(0);
+opacity: 1;
+}
+}
+
+.success-overlay-close {
+position: absolute;
+top: 16px;
+right: 16px;
+background: #f5f5f5;
+border: none;
+width: 32px;
+height: 32px;
+border-radius: 50%;
+font-size: 20px;
+cursor: pointer;
+transition: background 0.2s ease;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+.success-overlay-close:hover {
+background: #e0e0e0;
+}
+
+.success-overlay-content h3 {
+font-size: 1.5rem;
+color: #1a1a1a;
+margin-bottom: 24px;
+text-align: center;
+}
+
+.success-checkmark {
+display: inline-block;
+width: 40px;
+height: 40px;
+background: #28a745;
+color: white;
+border-radius: 50%;
+line-height: 40px;
+text-align: center;
+margin-right: 12px;
+}
+
+.success-overlay-products {
+margin: 24px 0;
+}
+
+.success-overlay-products h4 {
+font-size: 1.1rem;
+color: #1a1a1a;
+margin-bottom: 12px;
+}
+
+.success-overlay-products ul {
+list-style: none;
+padding: 0;
+}
+
+.success-overlay-products li {
+padding: 8px 0;
+border-bottom: 1px solid #e5e5e5;
+}
+
+.success-overlay-products li:last-child {
+border-bottom: none;
+}
+
+.success-overlay-timer {
+text-align: center;
+color: #666;
+font-size: 0.9rem;
+margin-top: 24px;
+padding-top: 16px;
+border-top: 1px solid #e5e5e5;
+}
+
+/* Utilities */
+.hidden {
+display: none !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+.container {
+padding: 16px;
+}
+
+.type-selection {
+min-height: 50vh;
+}
+
+.type-button {
+width: 100%;
+}
+
+.main-form {
+padding: 24px;
+margin-bottom: 80px;
+}
+
+.form-header {
+flex-direction: column;
+align-items: flex-start;
+gap: 16px;
+}
+
+.checkbox-group {
+flex-direction: column;
+gap: 12px;
+}
+
+.cash-section {
+flex-direction: column;
+gap: 12px;
+}
+
+.payment-button {
+width: 100%;
+}
+
+.submit-btn {
+position: fixed;
+bottom: 16px;
+left: 16px;
+right: 16px;
+z-index: 1000;
+}
+}
+
+/* Rimuovi TUTTI gli highlight touch su tablet/mobile */
+* {
+-webkit-tap-highlight-color: transparent !important;
+-webkit-touch-callout: none !important;
+-webkit-user-select: none !important;
+user-select: none !important;
+}
+
+/* Permetti selezione testo solo negli input */
+input, textarea {
+-webkit-user-select: text !important;
+user-select: text !important;
+}
+
+/* Rimuovi outline focus su tutti gli elementi */
+*:focus {
+outline: none !important;
+}
+
+/* Rimuovi highlight su pulsanti */
+button:focus, button:active {
+-webkit-tap-highlight-color: transparent !important;
+outline: none !important;
+}
+
+/* Rimuovi highlight su elementi cliccabili */
+.product-clickable:focus,
+.product-clickable:active,
+.type-button:focus,
+.type-button:active {
+-webkit-tap-highlight-color: transparent !important;
+outline: none !important;
+}
+
+/* STILI SISTEMA OFFLINE */
+.connection-indicator,
+.backup-button,
+.fiscalita-toggle,
+.stampante-toggle {
+position: fixed;
+right: 10px;
+padding: 6px 12px;
+border-radius: 20px;
+font-size: 11px;
+font-weight: 600;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 4px;
+box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+z-index: 1000;
+transition: all 0.3s ease;
+color: white;
+min-width: 60px;
+height: 26px;
+white-space: nowrap;
+}
+
+.connection-indicator {
+top: 10px;
+}
+
+.connection-indicator.online {
+background: #4CAF50;
+}
+
+.connection-indicator.offline {
+background: #f44336;
+animation: pulse-connection 2s infinite;
+}
+
+.backup-button {
+top: 42px;
+background: #2196F3;
+cursor: pointer;
+}
+
+.backup-button:hover {
+background: #1976D2;
+}
+
+/* ═══ BANDIERINA FISCALITÀ ═══
+   Terza della pila, sotto Online e Backup. Verde = i documenti fiscali si
+   emettono: scontrino Datacash per i Privati, fattura elettronica per i
+   Negozi. Rosso = la vendita si registra sul foglio e basta, in entrambi i
+   rami, e sui Negozi sparisce anche il campo del numero fattura — non
+   servirebbe a niente e chiederlo confonderebbe.
+   Lo stato resta fra una vendita e l'altra, quindi il rosso è fatto per farsi
+   notare: è una cosa che si dimentica accesa. */
+.fiscalita-toggle {
+top: 74px;
+cursor: pointer;
+-webkit-tap-highlight-color: transparent;
+}
+
+.fiscalita-toggle.attivo {
+background: #4CAF50;
+}
+
+/* Rosso pieno, fermo. C'era un'animazione di opacità 1→0,7 come sull'indicatore
+   Offline, ma a occhio non si vedeva: due secondi per il 30% di trasparenza non
+   li nota nessuno. Il rosso fisso accanto al verde delle altre due si legge
+   meglio di un lampeggio che non lampeggia. */
+.fiscalita-toggle.spento {
+background: #f44336;
+}
+
+/* ═══ STAMPANTE TERMICA ═══
+   Quarta della pila. Grigia = nessuna stampantina agganciata, e la vendita
+   funziona esattamente come prima: lo scontrino fiscale parte lo stesso, la
+   carta no. Verde = connessa, e ogni vendita ai Privati con scontrino emesso
+   esce anche sulla termica.
+   Non è una bandierina di stato come Fiscalità: è un pulsante di connessione.
+   Chrome pretende un gesto dell'utente per aprire il selettore Bluetooth,
+   quindi il collegamento non si può ripristinare da solo al caricamento —
+   va premuto una volta a inizio giornata e regge tutta la sessione. */
+.stampante-toggle {
+top: 106px;
+cursor: pointer;
+-webkit-tap-highlight-color: transparent;
+}
+
+.stampante-toggle.connessa {
+background: #4CAF50;
+}
+
+.stampante-toggle.assente {
+background: #9e9e9e;
+}
+
+.stampante-toggle.attesa {
+background: #ff9800;
+}
+
+/* Rossa come la Fiscalità spenta, e per lo stesso motivo: non è uno stato di
+   attesa, è una cosa che non può funzionare finché non ci si mette mano.
+   Grigio voleva dire "stampante non ancora collegata, collegala"; rosso vuol
+   dire "in questa pagina il Bluetooth non esiste, non c'è niente da premere". */
+.stampante-toggle.nonDisponibile {
+background: #f44336;
+}
+
+@keyframes pulse-connection {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.7; }
+}
+
+.offline-notification {
+position: fixed;
+right: 10px;
+/* Quinta della colonna a destra: Online 10, Backup 42, Fiscalità 74,
+   Stampante 106, e qui. */
+top: 138px;
+padding: 6px 12px;
+border-radius: 20px;
+font-size: 11px;
+font-weight: 600;
+background: #333;
+color: white;
+box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+transition: all 0.3s ease;
+z-index: 1001;
+min-width: 60px;
+height: 26px;
+display: flex;
+align-items: center;
+justify-content: center;
+white-space: nowrap;
+transform: translateX(300px);
+}
+
+.offline-notification.show {
+transform: translateX(0);
+}
+
+/* ═══ FATTURE IN ATTESA DI SCARICO ═══
+   Stessa famiglia delle notifiche qui sopra — pillola a destra che entra
+   scorrendo — ma NON sparisce da sola: resta finché non premi Scarica.
+   Il motivo è che un download avviato dal codice, senza che tu abbia toccato
+   niente, i browser lo bloccano (Safari su iPad sempre), e a.click() non
+   solleva nessun errore quando succede: il tablet direbbe "scaricata" con il
+   file mai arrivato. Il tuo dito sul bottone toglie di mezzo il problema.
+   Si impilano sotto le notifiche, che restano libere di scorrere sopra. */
+#fattureInAttesa {
+position: fixed;
+right: 10px;
+top: 140px;
+z-index: 1002;
+display: flex;
+flex-direction: column;
+align-items: flex-end;
+gap: 8px;
+pointer-events: none;
+}
+
+.fattura-attesa {
+pointer-events: auto;
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 5px 5px 5px 14px;
+border-radius: 20px;
+font-size: 11px;
+font-weight: 600;
+background: #ff8c42;
+color: white;
+box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+white-space: nowrap;
+transform: translateX(320px);
+transition: transform 0.3s ease;
+}
+
+.fattura-attesa.show {
+transform: translateX(0);
+}
+
+.fattura-attesa button {
+border: 0;
+border-radius: 14px;
+background: rgba(255,255,255,0.95);
+color: #b26a00;
+font-family: inherit;
+font-size: 11px;
+font-weight: 600;
+padding: 5px 13px;
+cursor: pointer;
+-webkit-tap-highlight-color: transparent;
+}
+
+.fattura-attesa button:active {
+background: white;
+}
+
+.offline-notification.success {
+background: #4CAF50;
+}
+
+.offline-notification.error {
+background: #f44336;
+}
+
+.offline-notification.warning {
+background: #ff9800;
+}
+
+.offline-notification.info {
+background: #2196F3;
+}
+
+.backup-info {
+font-size: 10px;
+opacity: 0.9;
+}
+
+/* Menu Backup */
+.backup-menu {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0,0,0,0.5);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 2000;
+}
+
+.backup-menu-content {
+background: white;
+padding: 24px;
+border-radius: 12px;
+max-width: 500px;
+width: 90%;
+box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.backup-menu-content h3 {
+margin: 0 0 16px 0;
+font-size: 18px;
+color: #1a1a1a;
+}
+
+.backup-menu-content p {
+margin: 8px 0;
+color: #666;
+font-size: 14px;
+}
+
+.backup-menu-buttons {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+margin-top: 20px;
+}
+
+.backup-menu-buttons button {
+padding: 12px 16px;
+border: none;
+border-radius: 6px;
+font-size: 14px;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.2s ease;
+white-space: nowrap;
+}
+
+.backup-menu-buttons button:first-child {
+background: #2196F3;
+color: white;
+}
+
+.backup-menu-buttons button:first-child:hover {
+background: #1976D2;
+}
+
+.backup-menu-buttons button:nth-child(2) {
+background: #4CAF50;
+color: white;
+}
+
+.backup-menu-buttons button:nth-child(2):hover {
+background: #388E3C;
+}
+
+.backup-menu-buttons button:nth-child(3) {
+background: #f44336;
+color: white;
+}
+
+.backup-menu-buttons button:nth-child(3):hover {
+background: #d32f2f;
+}
+
+.backup-menu-buttons button:last-child {
+background: #f5f5f5;
+color: #666;
+}
+
+.backup-menu-buttons button:last-child:hover {
+background: #e0e0e0;
+}
+
+/* Pulsante FINE */
+.fine-button {
+position: fixed;
+bottom: 10px;
+right: 10px;
+background: #f44336;
+color: white;
+border: none;
+padding: 6px 12px;
+border-radius: 20px;
+font-size: 11px;
+font-weight: 600;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 4px;
+box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+transition: all 0.3s ease;
+z-index: 1000;
+min-width: 60px;
+height: 26px;
+white-space: nowrap;
+}
+
+.fine-button:hover {
+background: #d32f2f;
+}
+
+.fine-button.loading {
+background: #999;
+cursor: not-allowed;
+}
+
+/* Conferma Modal */
+.fine-modal {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0,0,0,0.5);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 3000;
+}
+
+.fine-modal-content {
+background: white;
+padding: 24px;
+border-radius: 12px;
+max-width: 400px;
+width: 90%;
+box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+text-align: center;
+}
+
+.fine-modal-content h3 {
+margin: 0 0 16px 0;
+font-size: 20px;
+color: #1a1a1a;
+}
+
+.fine-modal-content p {
+margin: 0 0 24px 0;
+color: #666;
+font-size: 14px;
+line-height: 1.5;
+}
+
+.fine-modal-buttons {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+}
+
+.fine-modal-buttons button {
+padding: 12px 20px;
+border: none;
+border-radius: 6px;
+font-size: 14px;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+.fine-modal-buttons .confirm {
+background: #f44336;
+color: white;
+}
+
+.fine-modal-buttons .confirm:hover {
+background: #d32f2f;
+}
+
+.fine-modal-buttons .cancel {
+background: #f5f5f5;
+color: #666;
+}
+
+.fine-modal-buttons .cancel:hover {
+background: #e0e0e0;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div id="sceltaTipoVendita">
+<div class="type-selection">
+<div class="logo-header">
+<div class="logo-cornice">
+<img class="logo-caramelle" id="logoCaraMelle" alt="CaraMelle">
+</div>
+<h1 class="main-title">Registro vendite</h1>
+</div>
+
+<button class="type-button" id="btnPrivati">
+<h3>Privati</h3>
+<p>Prezzi listino privati</p>
+</button>
+
+<button class="type-button" id="btnNegozi">
+<h3>Horeca</h3>
+<p>Prezzi listino negozi</p>
+</button>
+</div>
+</div>
+
+<div id="selezioneProdotti" class="hidden">
+<div class="main-form">
+<div class="form-header">
+<div class="form-title">
+<h2 id="titoloSelezione">Seleziona Prodotti Disponibili Oggi</h2>
+<p style="color: #666; font-size: 0.9rem; margin-top: 8px;">
+Scegli solo i prodotti che hai in vendita oggi
+</p>
+</div>
+<button class="back-button" id="btnIndietroSelezione">← Indietro</button>
+</div>
+
+<div class="form-group" id="campoNomeEvento" style="margin-bottom: 32px;">
+<label for="nomeEvento">Nome Evento (opzionale)</label>
+<input type="text" id="nomeEvento" class="form-control" placeholder="es. Mercato di Natale, Fiera del Borgo, ecc." style="color: #ff8c42; font-weight: 600;">
+<style>
+#nomeEvento::placeholder {
+color: #666 !important;
+font-weight: 400 !important;
+}
+</style>
+<p style="color: #999; font-size: 0.8rem; margin-top: 4px;">
+Se inserito, apparirà nelle vendite per identificare l'evento
+</p>
+</div>
+
+<div class="product-section">
+<div class="section-title">Prodotti Confezionati</div>
+<div id="selezione-confezionati" class="products-grid"></div>
+</div>
+
+<div class="product-section">
+<details class="accordion">
+<summary>Prodotti Sfusi</summary>
+<div class="accordion-content">
+<div id="selezione-sfusi" class="products-grid"></div>
+</div>
+</details>
+</div>
+
+<div class="submit-section">
+<button class="submit-btn" id="btnConfermaSelez">
+Continua con i prodotti selezionati
+</button>
+<div style="text-align: center; margin-top: 12px; font-size: 0.9rem; color: #ff8c42;">
+<span id="contatoreProdotti">Nessun prodotto selezionato</span>
+</div>
+</div>
+</div>
+</div>
+
+<div id="paginaGestionale" class="hidden">
+<div class="main-form">
+<div class="form-header">
+<div class="form-title">
+<h2 id="titoloVendita">Registrazione Vendite</h2>
+</div>
+<button class="back-button" id="btnIndietroGestionale">← Indietro</button>
+</div>
+
+<div class="form-group">
+<label for="cliente">Cliente</label>
+<input type="text" id="cliente" class="form-control" placeholder="Nome / Cognome (opzionale)" autocomplete="off" list="elencoNegozi">
+<datalist id="elencoNegozi"></datalist>
+</div>
+
+<!-- ═══ DATI FISCALI DEL NEGOZIO ═══
+     Compare solo sulle vendite ai Negozi, perché la fattura elettronica
+     li pretende. Se il nome è già in anagrafica i campi si riempiono da
+     soli e restano chiusi; se il negozio è nuovo si aprono da compilare
+     e alla vendita vengono salvati, così la volta dopo bastano tre lettere. -->
+<div id="datiNegozio" class="form-group" style="display:none">
+  <!-- Numero fattura: proposto dal server (ultimo emesso + 1), modificabile
+       dall'operatore ma mai all'indietro. Quello che scrive qui diventa il
+       punto di partenza del suggerimento successivo. -->
+  <div id="rigaNumeroFattura" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <label for="numeroFattura" style="margin:0;white-space:nowrap">Fattura n.</label>
+    <input type="number" id="numeroFattura" class="form-control" min="1" step="1"
+           style="flex:0 0 110px" inputmode="numeric">
+    <span id="numeroFatturaNota" style="font-size:13px;color:#777"></span>
+  </div>
+
+  <!-- Scadenza del bonifico: quattro caselle, come i metodi di pagamento.
+       Vale per questa fattura; il predefinito è immediata. Etichetta e caselle
+       stanno in un contenitore unico perché a fiscalità spenta spariscono
+       insieme al numero: senza fattura non c'è niente da far scadere. -->
+  <div id="bloccoScadenza">
+  <label style="display:block;margin-bottom:8px">Scadenza pagamento</label>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+    <button type="button" class="payment-button selected" data-giorni="0"><span class="payment-name">Immediata</span></button>
+    <button type="button" class="payment-button" data-giorni="30"><span class="payment-name">30g</span></button>
+    <button type="button" class="payment-button" data-giorni="60"><span class="payment-name">60g</span></button>
+    <button type="button" class="payment-button" data-giorni="90"><span class="payment-name">90g</span></button>
+  </div>
+  </div>
+
+  <!-- Spese di spedizione: si digita quello che la spedizione è COSTATA,
+       IVA compresa se non la si detrae. È già l'imponibile della riga in
+       fattura: non si scorpora niente. L'aliquota è quella della merce
+       (spesa accessoria, art. 12 DPR 633/72), e la nota qui sotto fa vedere
+       il conto fatto, così non serve moltiplicare a mente. -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+    <label for="speseSpedizione" style="margin:0;white-space:nowrap">Spedizione €</label>
+    <input type="number" id="speseSpedizione" class="form-control" min="0" step="0.01"
+           style="flex:0 0 110px" inputmode="decimal" placeholder="0,00">
+  </div>
+  <div id="speseSpedizioneNota" style="font-size:13px;color:#777;margin-bottom:12px"></div>
+
+  <div id="negozioTrovato" style="display:none;font-size:14px;color:#2e7d32;margin-bottom:8px;"></div>
+  <div id="negozioNuovo" style="display:none">
+    <div style="font-size:14px;color:#b26a00;margin-bottom:8px;">
+      Negozio nuovo: servono i dati per la fattura. Li salvo per le prossime volte.
+    </div>
+    <input type="text" id="negRagione"   class="form-control" placeholder="Ragione sociale *" style="margin-bottom:6px">
+    <input type="text" id="negPiva"      class="form-control" placeholder="Partita IVA (11 cifre) *" inputmode="numeric" style="margin-bottom:6px">
+    <input type="text" id="negIndirizzo" class="form-control" placeholder="Indirizzo *" style="margin-bottom:6px">
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <input type="text" id="negCap"      class="form-control" placeholder="CAP *" inputmode="numeric" style="flex:0 0 90px">
+      <input type="text" id="negComune"   class="form-control" placeholder="Comune *" style="flex:1">
+      <input type="text" id="negProv"     class="form-control" placeholder="PR *" maxlength="2" style="flex:0 0 70px;text-transform:uppercase">
+    </div>
+    <input type="text" id="negSdi" class="form-control" placeholder="Codice SdI (6-7 caratteri)" style="margin-bottom:6px;text-transform:uppercase">
+    <input type="text" id="negPec" class="form-control" placeholder="PEC (se non c'è il codice SdI)">
+  </div>
+</div>
+
+<div id="opzioniCondivisione" class="form-group">
+<div class="checkbox-group">
+<div class="checkbox-item">
+<input type="checkbox" id="whatsapp">
+<label for="whatsapp">Invia invito Golosone su WhatsApp</label>
+</div>
+</div>
+<div style="display: flex; gap: 16px; margin-top: 12px;">
+<input type="text"
+inputmode="tel"
+enterkeyhint="done"
+pattern="[0-9]*"
+autocomplete="off"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false"
+id="telefono"
+class="form-control"
+placeholder="Telefono"
+style="flex: 1;">
+</div>
+</div>
+
+<div class="product-section">
+<div class="section-title">Prodotti Confezionati</div>
+<div id="prodotti-confezionati" class="products-grid"></div>
+</div>
+
+<div class="product-section">
+<details class="accordion">
+<summary>Prodotti Sfusi</summary>
+<div class="accordion-content">
+<div class="toggle-container">
+<span class="toggle-label">PESO</span>
+<label class="toggle-switch">
+<input type="checkbox" id="togglePesoImporto">
+<span class="toggle-slider"></span>
+</label>
+<span class="toggle-label">IMPORTO</span>
+</div>
+<div id="prodotti-sfuso" class="products-grid"></div>
+</div>
+</details>
+</div>
+
+<div class="form-group" id="gruppoPagamento">
+<label>Metodo di Pagamento</label>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+<button type="button" class="payment-button" id="btnContanti">
+<span class="payment-name">Contanti</span>
+</button>
+<button type="button" class="payment-button" id="btnSatispay">
+<span class="payment-name">Satispay</span>
+</button>
+<button type="button" class="payment-button" id="btnSumUp">
+<span class="payment-name">SumUp</span>
+</button>
+</div>
+</div>
+
+<div class="form-group">
+<label for="personalizzato">Importo Personalizzato (€)</label>
+<input type="text"
+inputmode="decimal"
+pattern="[0-9.]*"
+enterkeyhint="done"
+autocomplete="off"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false"
+id="personalizzato"
+class="form-control"
+placeholder="Opzionale">
+</div>
+
+<div class="form-group" id="sezioneContanti" style="display: none;">
+<label>Pagamento in Contanti</label>
+<div class="cash-section">
+<input type="text"
+inputmode="decimal"
+pattern="[0-9.]*"
+enterkeyhint="done"
+autocomplete="off"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false"
+id="banconota"
+class="form-control"
+placeholder="Banconota (€)">
+<div id="resto" class="resto-display">Resto: €0,00</div>
+</div>
+</div>
+
+<div class="totals-section">
+<h3>Totale</h3>
+<div id="totaleCalcolato" class="total-calculated hidden"></div>
+<div id="totaleCustomLabel" class="total-custom-label hidden">Importo Personalizzato</div>
+<div id="totale" class="total-amount">€0,00</div>
+</div>
+
+<div class="submit-section">
+<button class="submit-btn" id="btnRegistraVendita">Registra Vendita</button>
+</div>
+
+<div id="risposta"></div>
+</div>
+</div>
+</div>
+
+<div id="connectionIndicator" class="connection-indicator online">
+<span class="status-text">Online</span>
+</div>
+
+<!-- Terza bandierina: interruttore dei documenti fiscali. Il pulsante
+     Backup se lo crea il JS, questo sta nel markup perché deve esserci
+     subito, prima ancora che parta il sistema offline. -->
+<div id="fiscalitaToggle" class="fiscalita-toggle attivo" role="button" tabindex="0">
+<span class="status-text">Fiscalità</span>
+</div>
+
+<!-- Quarta: aggancio della stampantina Bluetooth. Grigia finché non la si
+     collega; da lì in poi ogni scontrino emesso esce anche su carta. -->
+<div id="stampanteToggle" class="stampante-toggle assente" role="button" tabindex="0">
+<span class="status-text">Stampante</span>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     GUSCIO DEL GESTIONALE
+
+     Questa pagina non contiene il gestionale: contiene l'accesso e
+     l'attaccapanni a cui il gestionale si appende. Serve perche' ora la
+     pagina sta sul sito e non piu' dentro Apps Script, e quindi due cose
+     che prima faceva Google adesso le facciamo noi:
+
+     - far entrare solo chi e' autorizzato (prima bastava l'account Google
+       collegato alla web app; qui la serratura la controlla il motore);
+     - riempire la configurazione — listino, commissioni, grammature,
+       aliquote, logo — che prima veniva scritta dentro la pagina mentre
+       Google la costruiva.
+
+     L'ordine conta: il gestionale legge la configurazione appena parte,
+     quindi non si puo' caricare prima di averla. Per questo app.js viene
+     agganciato solo alla fine, quando c'e' tutto.
+     ═══════════════════════════════════════════════════════════════════ -->
+
+<div id="accessoOverlay" style="display:none">
+  <div class="accesso-riquadro">
+    <h2>Registro vendite</h2>
+    <p id="accessoMessaggio">Accedi con l'account autorizzato per usare il gestionale.</p>
+    <div id="accessoBottone"></div>
+    <p class="accesso-nota" id="accessoNota"></p>
+  </div>
+</div>
+
+<style>
+#accessoOverlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.accesso-riquadro { text-align: center; max-width: 340px; width: 100%; }
+.accesso-riquadro h2 { margin: 0 0 10px; font-size: 20px; color: #333; }
+#accessoMessaggio { margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: #666; }
+#accessoBottone { display: flex; justify-content: center; min-height: 44px; }
+.accesso-nota { margin-top: 18px; font-size: 12px; line-height: 1.5; color: #c62828; min-height: 18px; }
+.accesso-nota.attesa { color: #666; }
+</style>
+
+<script>
+/* ═════ COSE DA COMPILARE ═══════════════════════════════════════════
+
+   MOTORE — l'indirizzo della web app di Apps Script, quello che finisce
+   in /exec. Lo si copia dalla finestra "Distribuisci > Gestisci
+   distribuzioni". La distribuzione va impostata su "Esegui come: me" e
+   "Chi ha accesso: chiunque": e' necessario perche' la chiamata arriva
+   ora da un'altra pagina, e la serratura la mette api.gs, non Google.
+
+   CLIENT_ID — lo stesso valore che va in API_CLIENT_ID dentro api.gs.
+   Si crea nella console Google Cloud, Credenziali > ID client OAuth >
+   Applicazione web, autorizzando come origine JavaScript
+   https://www.confetteriadivalle.it
+
+   Finche' sono vuoti, la pagina lo dice invece di fallire in silenzio.
+   ═══════════════════════════════════════════════════════════════════ */
+var MOTORE    = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0SgePOlTU38Fqxklujy2AYipeK1963F5KCV4oaUUQK-7e/exec';
+var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleusercontent.com';
+
+(function () {
+  'use strict';
+
+  var CHIAVE_SESSIONE = 'caramelle_sessione';
+  var CHIAVE_CONFIG   = 'caramelle_config_cache';
+
+  var overlay   = document.getElementById('accessoOverlay');
+  var nota      = document.getElementById('accessoNota');
+  var messaggio = document.getElementById('accessoMessaggio');
+
+  function scrivi(testo, attesa) {
+    nota.textContent = testo || '';
+    nota.className = 'accesso-nota' + (attesa ? ' attesa' : '');
+  }
+
+  function sessione(valore) {
+    try {
+      if (valore === undefined) return localStorage.getItem(CHIAVE_SESSIONE);
+      if (valore === null) localStorage.removeItem(CHIAVE_SESSIONE);
+      else localStorage.setItem(CHIAVE_SESSIONE, valore);
+    } catch (e) {}
+    return valore;
+  }
+
+  /* ─── la chiamata al motore ────────────────────────────────────────
+     Il contenuto e' JSON ma viaggia dichiarato come testo semplice, e la
+     chiave di sessione sta nel corpo invece che nelle intestazioni. Non e'
+     sciatteria: qualunque cosa fuori dallo standard piu' stretto fa partire
+     al browser una domanda preliminare ("posso?") a cui Apps Script non
+     risponde, e la chiamata morirebbe prima di arrivare al motore.        */
+  function chiama(azione, args) {
+    if (!MOTORE) return Promise.reject(new Error('Indirizzo del motore non configurato'));
+    var corpo = { azione: azione, args: args || [] };
+    var s = sessione();
+    if (s) corpo.sessione = s;
+
+    return fetch(MOTORE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(corpo)
+    }).then(function (r) {
+      return r.text();
+    }).then(function (testo) {
+      var dati;
+      try { dati = JSON.parse(testo); }
+      catch (e) { throw new Error('Risposta del motore illeggibile'); }
+
+      if (dati.scaduta) {
+        // La sessione non vale piu': si torna all'accesso invece di
+        // insistere con una chiave morta a ogni vendita.
+        sessione(null);
+        mostraAccesso('La sessione e\' scaduta. Rientra per continuare.');
+        throw new Error('Sessione scaduta');
+      }
+      if (!dati.success) throw new Error(dati.errore || 'Errore del motore');
+      return dati.risultato;
+    });
+  }
+
+  /* ─── il finto google.script.run ───────────────────────────────────
+     Il gestionale chiama il motore in nove punti, tutti nella forma
+     google.script.run.withSuccessHandler(...).qualcosa(...). Invece di
+     riscrivere quei nove punti — e rischiare di rompere la vendita per
+     una virgola — si ricostruisce qui l'oggetto che si aspettano, con la
+     stessa forma e lo stesso comportamento. Dal punto di vista del
+     gestionale non e' cambiato niente.
+
+     Ogni volta che si legge google.script.run si ottiene un costruttore
+     nuovo: se ne restituisse sempre lo stesso, due vendite che partono
+     insieme si ruberebbero i gestori a vicenda.                          */
+  var AZIONI = ['salvaDati', 'salvaBackupDrive', 'recuperaUltimoBackup',
+                'salvaReportFineGiornata', 'elencoNomiNegozi', 'cercaNegozio',
+                'numeroFatturaSuggerito', 'salvaNegozio'];
+
+  function costruttore() {
+    var ok = null, ko = null;
+    var b = {
+      withSuccessHandler: function (f) { ok = f; return b; },
+      withFailureHandler: function (f) { ko = f; return b; },
+      withUserObject:     function ()  { return b; }
+    };
+    AZIONI.forEach(function (nome) {
+      b[nome] = function () {
+        var args = Array.prototype.slice.call(arguments);
+        chiama(nome, args).then(
+          function (r) { if (ok) ok(r); },
+          function (e) { if (ko) ko(e); else console.error(nome + ':', e); }
+        );
+      };
+    });
+    return b;
+  }
+
+  function installaPonte() {
+    window.google = window.google || {};
+    window.google.script = window.google.script || {};
+    Object.defineProperty(window.google.script, 'run', {
+      configurable: true,
+      get: costruttore
+    });
+  }
+
+  /* ─── avvio del gestionale ─────────────────────────────────────────── */
+  function avvia(configIniziale) {
+    window.__CONFIG__ = configIniziale.config;
+    window.__LOGO__   = configIniziale.logo || '';
+    installaPonte();
+
+    // Trappola, e non teorica: il gestionale si aggancia all'evento
+    // "documento pronto" in sei punti, fra cui quelli che disegnano i
+    // prodotti e collegano i pulsanti. Ma app.js viene caricato a mano, e un
+    // file caricato cosi' non trattiene quell'evento: puo' benissimo partire
+    // dopo che e' gia' passato, e allora quei sei punti restano ad aspettare
+    // per sempre — schermata vuota, nessun prodotto, nessun pulsante vivo.
+    //
+    // Si chiude da due lati. Qui si fa in modo che chi si mette in ascolto a
+    // giochi fatti venga richiamato subito lo stesso; il controllo sta dentro
+    // la funzione e non fuori, perche' quando la si installa la pagina
+    // potrebbe essere ancora in costruzione e la risposta cambierebbe.
+    var originale = document.addEventListener.bind(document);
+    document.addEventListener = function (tipo, fn, opzioni) {
+      if (tipo === 'DOMContentLoaded' && typeof fn === 'function' && document.readyState !== 'loading') {
+        setTimeout(fn, 0);
+        return;
+      }
+      return originale(tipo, fn, opzioni);
+    };
+
+    overlay.style.display = 'none';
+
+    // L'altro lato: app.js non si aggancia finche' la pagina non e' finita.
+    // Cosi' il momento in cui parte e' sempre lo stesso, che la risposta del
+    // motore arrivi in un millisecondo o in cinque secondi.
+    function aggancia() {
+      var s = document.createElement('script');
+      s.src = 'app.js?v=1';
+      s.onerror = function () {
+        overlay.style.display = 'flex';
+        scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
+      };
+      document.body.appendChild(s);
+    }
+    if (document.readyState === 'loading') originale('DOMContentLoaded', aggancia);
+    else aggancia();
+  }
+
+  function prendiConfigEAvvia() {
+    scrivi('Carico il listino...', true);
+    return chiama('configIniziale', []).then(function (c) {
+      // Copia di scorta: se domani mattina la connessione non c'e', il
+      // gestionale parte lo stesso con l'ultimo listino visto e le vendite
+      // finiscono in coda, come hanno sempre fatto.
+      try { localStorage.setItem(CHIAVE_CONFIG, JSON.stringify(c)); } catch (e) {}
+      avvia(c);
+    }).catch(function (e) {
+      console.error('Configurazione non scaricata:', e);
+      var salvata = null;
+      try { salvata = JSON.parse(localStorage.getItem(CHIAVE_CONFIG) || 'null'); } catch (e2) {}
+      if (salvata && salvata.config) {
+        scrivi('');
+        avvia(salvata);
+        return;
+      }
+      if (String(e.message || e).indexOf('Sessione scaduta') === -1) {
+        mostraAccesso('Non riesco a raggiungere il motore. Controlla la connessione.');
+      }
+    });
+  }
+
+  /* ─── accesso con Google ───────────────────────────────────────────── */
+  function mostraAccesso(testo) {
+    overlay.style.display = 'flex';
+    scrivi(testo || '');
+    caricaGoogle();
+  }
+
+  var googleCaricato = false;
+  function caricaGoogle() {
+    if (googleCaricato) return;
+    googleCaricato = true;
+
+    if (!MOTORE || !CLIENT_ID) {
+      messaggio.textContent = 'Il gestionale non e\' ancora configurato.';
+      scrivi(!MOTORE ? 'Manca l\'indirizzo del motore (MOTORE).'
+                     : 'Manca l\'identificativo dell\'accesso (CLIENT_ID).');
+      return;
+    }
+
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = function () {
+      window.google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: function (risposta) { entra(risposta.credential); }
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById('accessoBottone'),
+        { theme: 'outline', size: 'large', text: 'signin_with', locale: 'it' }
+      );
+    };
+    s.onerror = function () { scrivi('Non riesco a caricare l\'accesso Google.'); };
+    document.head.appendChild(s);
+  }
+
+  function entra(idToken) {
+    scrivi('Verifico l\'accesso...', true);
+    fetch(MOTORE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ azione: 'accedi', idToken: idToken })
+    }).then(function (r) { return r.text(); })
+      .then(function (testo) {
+        var d = JSON.parse(testo);
+        if (!d.success) { scrivi(d.errore || 'Accesso rifiutato.'); return; }
+        sessione(d.sessione);
+        prendiConfigEAvvia();
+      })
+      .catch(function (e) {
+        console.error('Accesso non riuscito:', e);
+        scrivi('Accesso non riuscito. Riprova.');
+      });
+  }
+
+  // Da qui parte tutto: se c'e' gia' una chiave valida si va dritti al
+  // gestionale senza chiedere niente. E' il caso normale del tablet, che
+  // riaccede una volta al mese e non se ne accorge.
+  if (sessione()) {
+    overlay.style.display = 'flex';
+    prendiConfigEAvvia();
+  } else {
+    mostraAccesso('');
+  }
+})();
+</script>
+
+</body>
+</html>
