@@ -2496,7 +2496,7 @@ salvaReport();
     push(new Uint8Array([0x12, 0x23, densita()]));
     push(new Uint8Array([ESC, 0x61, 0x01]));           // centro
     push(new Uint8Array([ESC, 0x45, 0x01]));           // grassetto
-    push("Buongiorno Principessa\n");
+    push("Buongiorno salsiccia!\n");
     push(new Uint8Array([ESC, 0x45, 0x00]));
     push(new Uint8Array([LF, LF, LF]));
     var tot = 0;
