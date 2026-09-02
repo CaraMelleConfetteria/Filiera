@@ -251,10 +251,24 @@ clearTimeout(timeout);
 self.coda = self.coda.filter(function(v) { return v.id !== vendita.id; });
 self.aggiornaBadgeCoda();
 
+// VENDITA RIFIUTATA: il motore si e' fermato prima di scrivere qualsiasi cosa —
+// manca l'IVA o il prezzo nel Foglio, oppure non ha ottenuto il lock. Niente riga
+// nel registro, niente scontrino, niente carta: la vendita non esiste.
+//
+// Va detto con parole diverse dall'altro avviso, perche' sono due situazioni
+// opposte e confonderle e' pericoloso: li' l'incasso e' registrato e manca il
+// documento, qui non c'e' proprio niente e i soldi in mano sono senza vendita.
+if (risposta && risposta.registrata === false) {
+  console.error('Vendita rifiutata:', risposta.messaggio);
+  try { alert('VENDITA NON REGISTRATA\n\n' + (risposta.messaggio || 'La vendita non e\' stata registrata.') +
+              '\n\nNon e\' stato scritto niente nel registro e non e\' stato emesso nessuno scontrino.\n\n' +
+              'Sistema il dato mancante nel Foglio e RIFAI la vendita da capo.'); } catch (e) {}
+}
+
 // AVVISO FISCALE: vendita salvata ma scontrino non emesso -> l'operatrice deve saperlo.
-if (risposta && risposta.scontrino && risposta.scontrino.success === false && !risposta.scontrino.nonApplicabile) {
+else if (risposta && risposta.scontrino && risposta.scontrino.success === false && !risposta.scontrino.nonApplicabile) {
 console.error('Scontrino NON emesso:', risposta.scontrino.errore);
-try { alert('ATTENZIONE\n\nLa vendita è stata REGISTRATA ma lo SCONTRINO FISCALE NON è stato emesso.\n\nMotivo: ' + (risposta.scontrino.errore || 'errore') + '\n\nEmetti lo scontrino manualmente / verifica prima di continuare.'); } catch (e) {}
+try { alert('ATTENZIONE — SCONTRINO FISCALE NON EMESSO\n\nLa vendita è stata REGISTRATA ma lo SCONTRINO FISCALE NON è stato emesso.\n\nMotivo: ' + (risposta.scontrino.errore || 'errore') + '\n\nEmetti lo scontrino manualmente / verifica prima di continuare.'); } catch (e) {}
 }
 
 // STAMPA SU CARTA: il server manda `stampa` solo per i Privati e solo se lo
@@ -301,7 +315,9 @@ if (risposta && risposta.fattura) {
   }
 }
 
-self.mostraNotifica('Vendita sincronizzata', 2000, 'success');
+self.mostraNotifica(risposta && risposta.registrata === false ? 'Vendita NON registrata' : 'Vendita sincronizzata',
+                    risposta && risposta.registrata === false ? 4000 : 2000,
+                    risposta && risposta.registrata === false ? 'error' : 'success');
 resolve(risposta);
 })
 .withFailureHandler(function(errore) {
