@@ -43,7 +43,10 @@ function disegnaFiscalitaToggle() {
   if (!el) return;
   var acceso = fiscalitaAttiva();
   el.className = 'fiscalita-toggle ' + (acceso ? 'attivo' : 'spento');
-  el.querySelector('.status-text').textContent = acceso ? 'Fiscalità' : 'Fiscalità OFF';
+  // La scritta non cambia: lo stato lo dice il colore. «Fiscalità OFF» sul
+  // rosso era una ripetizione, e su una pillola larga un pollice rubava
+  // spazio a una parola che si legge già benissimo da sola.
+  el.querySelector('.status-text').textContent = 'Fiscalità';
   el.title = acceso
     ? 'Scontrini e fatture vengono emessi. Tocca per sospenderli.'
     : 'FISCALITÀ SOSPESA: le vendite si registrano soltanto. Nessuno scontrino ai privati, nessuna fattura ai negozi. Tocca per riattivarla.';

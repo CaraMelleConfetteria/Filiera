@@ -1101,7 +1101,7 @@ animation: pulse-connection 2s infinite;
 }
 
 .backup-button {
-top: 42px;
+top: 106px;
 background: #2196F3;
 cursor: pointer;
 }
@@ -1111,7 +1111,8 @@ background: #1976D2;
 }
 
 /* ═══ BANDIERINA FISCALITÀ ═══
-   Terza della pila, sotto Online e Backup. Verde = i documenti fiscali si
+   Seconda della pila, subito sotto Online: è la bandierina che si guarda per
+   prima aprendo il banco. Verde = i documenti fiscali si
    emettono: scontrino Datacash per i Privati, fattura elettronica per i
    Negozi. Rosso = la vendita si registra sul foglio e basta, in entrambi i
    rami, e sui Negozi sparisce anche il campo del numero fattura — non
@@ -1119,7 +1120,7 @@ background: #1976D2;
    Lo stato resta fra una vendita e l'altra, quindi il rosso è fatto per farsi
    notare: è una cosa che si dimentica accesa. */
 .fiscalita-toggle {
-top: 74px;
+top: 42px;
 cursor: pointer;
 -webkit-tap-highlight-color: transparent;
 }
@@ -1137,7 +1138,7 @@ background: #f44336;
 }
 
 /* ═══ STAMPANTE TERMICA ═══
-   Quarta della pila. Grigia = nessuna stampantina agganciata, e la vendita
+   Terza della pila. Grigia = nessuna stampantina agganciata, e la vendita
    funziona esattamente come prima: lo scontrino fiscale parte lo stesso, la
    carta no. Verde = connessa, e ogni vendita ai Privati con scontrino emesso
    esce anche sulla termica.
@@ -1146,7 +1147,7 @@ background: #f44336;
    quindi il collegamento non si può ripristinare da solo al caricamento —
    va premuto una volta a inizio giornata e regge tutta la sessione. */
 .stampante-toggle {
-top: 106px;
+top: 74px;
 cursor: pointer;
 -webkit-tap-highlight-color: transparent;
 }
@@ -1179,9 +1180,12 @@ background: #f44336;
 .offline-notification {
 position: fixed;
 right: 10px;
-/* Quinta della colonna a destra: Online 10, Backup 42, Fiscalità 74,
-   Stampante 106, e qui. */
-top: 138px;
+/* Sotto la colonna delle bandierine — Online 10, Fiscalità 42, Stampante 74,
+   Backup 106 — ma staccata: si salta un posto, come se ci fosse una pillola
+   che non c'è. Le quattro sopra dicono com'è messo il gestionale e stanno
+   sempre lì; questi sono messaggi di passaggio, e il vuoto serve a non farli
+   leggere come una quinta bandierina. */
+top: 170px;
 padding: 6px 12px;
 border-radius: 20px;
 font-size: 11px;
@@ -1215,7 +1219,7 @@ transform: translateX(0);
 #fattureInAttesa {
 position: fixed;
 right: 10px;
-top: 140px;
+top: 172px;
 z-index: 1002;
 display: flex;
 flex-direction: column;
@@ -1747,7 +1751,7 @@ placeholder="Banconota (€)">
 <span class="status-text">Fiscalità</span>
 </div>
 
-<!-- Quarta: aggancio della stampantina Bluetooth. Grigia finché non la si
+<!-- Terza: aggancio della stampantina Bluetooth. Grigia finché non la si
      collega; da lì in poi ogni scontrino emesso esce anche su carta. -->
 <div id="stampanteToggle" class="stampante-toggle assente" role="button" tabindex="0">
 <span class="status-text">Stampante</span>
@@ -1952,7 +1956,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=2';
+      s.src = 'app.js?v=3';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
