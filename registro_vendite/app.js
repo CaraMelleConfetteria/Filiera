@@ -187,6 +187,54 @@ aggiornaTotali();
 }
 
 var SistemaOffline = (function() {
+/* ═════ DUE DOMANDE CHE SI FANNO A OGNI INVIO ══════════════════════ */
+
+/**
+ * La data in cui la vendita e' stata fatta DAVVERO, non quella in cui
+ * riesce a partire.
+ *
+ * Il motore la accetta gia' da sempre (`data.dataOriginale`), ma nessuno
+ * gliela mandava: una vendita rimasta in coda e sincronizzata il giorno
+ * dopo finiva nel registro col giorno sbagliato, e il report di quella
+ * serata non la trovava piu'. La coda porta il timestamp di ogni vendita
+ * dal momento in cui e' stata battuta: basta tradurlo.
+ *
+ * Si usa l'ora locale del tablet, che e' quella del banco: una vendita
+ * delle 23:27 resta del suo giorno e non scivola a quello dopo.
+ */
+function dataItalianaDaTimestamp(iso) {
+  if (!iso) return null;
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  var due = function (n) { return (n < 10 ? '0' : '') + n; };
+  return due(d.getDate()) + '/' + due(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
+/**
+ * Il motore ha detto "non l'ho registrata": si puo' riprovare o e' inutile?
+ *
+ * Sono due mondi opposti e per mesi il gestionale li ha confusi, buttando
+ * via le vendite di tutti e due. Il rifiuto per LUCCHETTO ("sistema
+ * occupato") e' temporaneo: il motore non ha nemmeno guardato la vendita,
+ * e fra un attimo passa. Il rifiuto per IVA o PREZZO mancante nel Foglio
+ * e' definitivo: il motore l'ha archiviato nell'idempotenza, e riprovare
+ * restituira' per sempre lo stesso no finche' non si rifa' la vendita da
+ * capo con un id nuovo.
+ *
+ * Il 5 settembre 2026 tre vendite sono sparite proprio cosi': il motore
+ * ha risposto "sistema occupato, riprova", il tablet ha letto una risposta
+ * riuscita e le ha cancellate dalla coda. Ventiquattro euro e cinquanta
+ * spariti senza un errore da nessuna parte.
+ */
+function rispostaRiprovabile(risposta) {
+  if (!risposta || risposta.registrata !== false) return false;
+  if (risposta.riprovabile === true) return true;
+  // Ripiego per un motore non ancora aggiornato: il rifiuto per lucchetto
+  // si riconosce da com'e' fatto.
+  var motivo = (risposta.scontrino && risposta.scontrino.errore) || '';
+  return String(motivo).indexOf('lock non ottenuto') >= 0;
+}
+
 function SistemaOffline() {
 this.coda = [];
 this.intervalloCoda = null;
@@ -194,6 +242,10 @@ this.tentativiInvio = {};
 this.venditeNonBackuppate = 0;
 this.backupInCorso = false;
 this.ultimoBackup = null;
+// Quando si e' avvisato l'ultima volta che ci sono vendite non registrate.
+// Serve a ripetere l'avviso finche' il problema c'e', invece di dirlo una
+// volta sola e lasciare che passi inosservato per cinque ore.
+this.ultimoAllarme = 0;
 
 var self = this;
 setInterval(function() { self.verificaConnessione(); }, 10000);
@@ -251,6 +303,25 @@ reject(new Error('Timeout'));
 google.script.run
 .withSuccessHandler(function(risposta) {
 clearTimeout(timeout);
+
+// RIFIUTO TEMPORANEO: la vendita RESTA in coda e si riprova.
+// Il motore risponde educatamente anche quando non ha potuto fare niente
+// ("sistema occupato"), e quella per il tablet e' una risposta riuscita:
+// senza questo controllo la vendita verrebbe cancellata qui sotto e non
+// esisterebbe piu' da nessuna parte. E' il difetto che il 5 settembre 2026
+// ha fatto sparire tre vendite durante la fiera.
+if (rispostaRiprovabile(risposta)) {
+vendita.stato = 'in_attesa';
+vendita.fallita = true;
+vendita.errore = risposta.messaggio || 'Sistema occupato';
+self.aggiornaBadgeCoda();
+var attesa = Math.min(5000 * Math.pow(2, Math.max(0, vendita.tentativi - 1)), 60000);
+setTimeout(function() { self.inviaVendita(vendita); }, attesa);
+self.mostraNotifica('Motore occupato, riprovo tra ' + (attesa/1000) + 's', 2500, 'warning');
+resolve(risposta);
+return;
+}
+
 self.coda = self.coda.filter(function(v) { return v.id !== vendita.id; });
 self.aggiornaBadgeCoda();
 
@@ -327,6 +398,9 @@ resolve(risposta);
 clearTimeout(timeout);
 vendita.stato = 'errore';
 vendita.errore = errore.toString();
+// Marchiata: da qui in poi conta nell'allarme delle vendite non registrate,
+// e ci resta finche' non entra davvero nel registro.
+vendita.fallita = true;
 
 if (vendita.tentativi < 5) {
 var delay = Math.min(5000 * Math.pow(2, vendita.tentativi - 1), 60000);
@@ -338,13 +412,29 @@ self.mostraNotifica('Riprovo tra ' + (delay/1000) + 's...', 2000, 'warning');
 } else {
 self.mostraNotifica('Errore invio - riproverò più tardi', 3000, 'error');
 }
+// L'avviso qui sopra dura tre secondi e poi non c'e' piu'. Quello che
+// resta a schermo finche' la coda non si svuota e' la pillola rossa.
+self.aggiornaAllarme();
 
 self.aggiornaBadgeCoda();
 reject(errore);
 })
-.salvaDati(vendita);
+.salvaDati(_venditaDaInviare(vendita));
 });
 };
+
+/* La copia che parte davvero: come la vendita in coda, piu' il giorno in
+   cui e' stata battuta. Si compone al momento dell'invio e non alla
+   creazione, cosi' vale anche per le vendite rimaste in coda da prima di
+   questa modifica — hanno gia' il timestamp, gli mancava solo la traduzione. */
+function _venditaDaInviare(vendita) {
+var copia = Object.assign({}, vendita);
+if (!copia.dataOriginale) {
+var giorno = dataItalianaDaTimestamp(vendita.timestamp);
+if (giorno) copia.dataOriginale = giorno;
+}
+return copia;
+}
 
 SistemaOffline.prototype.sincronizzaCoda = function() {
 if (!navigator.onLine || this.coda.length === 0) return;
@@ -381,11 +471,92 @@ indicator.querySelector('.status-text').textContent = 'Offline';
 
 SistemaOffline.prototype.aggiornaBadgeCoda = function() {
 this.salvaCodaLocale();   // ogni variazione della coda viene persistita subito
+this.aggiornaAllarme();
 var backupBtn = document.getElementById('backupButton');
 if (backupBtn) {
 var testo = this.coda.length > 0 ? 'Backup (' + this.coda.length + ')' : 'Backup';
 backupBtn.querySelector('span:first-child').textContent = testo;
 }
+};
+
+/* ═════ ALLARME: VENDITE NON REGISTRATE ════════════════════════════
+   Il 5 settembre 2026 diciotto vendite sono rimaste fuori dal registro per
+   cinque ore, e al banco l'unico segnale e' stato un avviso rosso che
+   compare dopo il quinto tentativo e sparisce in tre secondi. Simona non
+   poteva accorgersene, e infatti non se n'e' accorta.
+
+   Questa pillola non sparisce da sola. Resta finche' l'ultima vendita non
+   e' entrata nel registro, e ogni dieci minuti si fa risentire con un
+   avviso che va chiuso a mano. Non blocca la vendita — al banco non si
+   ferma la fila per un guasto del gestionale — ma diventa impossibile
+   lavorare un'ora senza vederla.
+
+   Conta solo le vendite che hanno gia' fallito almeno una volta: una
+   vendita appena battuta e' in coda per un istante, e non e' un guasto. */
+
+var ALLARME_RIPETI_MS = 10 * 60 * 1000;
+
+SistemaOffline.prototype.venditeNonRegistrate = function() {
+return this.coda.filter(function(v) { return v.fallita; });
+};
+
+SistemaOffline.prototype.aggiornaAllarme = function() {
+var fallite = this.venditeNonRegistrate();
+var contenitore = document.getElementById('venditeNonRegistrate');
+
+if (fallite.length === 0) {
+if (contenitore) contenitore.remove();
+this.ultimoAllarme = 0;
+return;
+}
+
+if (!contenitore) {
+contenitore = document.createElement('div');
+contenitore.id = 'venditeNonRegistrate';
+var self = this;
+contenitore.addEventListener('click', function() { self.dettaglioAllarme(); });
+document.body.appendChild(contenitore);
+}
+
+contenitore.textContent = fallite.length === 1
+? '1 VENDITA NON REGISTRATA'
+: fallite.length + ' VENDITE NON REGISTRATE';
+
+// Il primo avviso e' immediato; poi si ripete finche' il problema c'e'.
+var ora = Date.now();
+if (ora - this.ultimoAllarme > ALLARME_RIPETI_MS) {
+this.ultimoAllarme = ora;
+var self2 = this;
+setTimeout(function() { self2.dettaglioAllarme(); }, 400);
+}
+};
+
+SistemaOffline.prototype.dettaglioAllarme = function() {
+var fallite = this.venditeNonRegistrate();
+if (fallite.length === 0) return;
+
+var totale = 0;
+var righe = fallite.map(function(v) {
+var importo = Number(v.totaleMostrato) || 0;
+totale += importo;
+var ora = v.timestamp ? new Date(v.timestamp) : null;
+var quando = ora && !isNaN(ora.getTime())
+? ('0' + ora.getHours()).slice(-2) + ':' + ('0' + ora.getMinutes()).slice(-2)
+: '--:--';
+return '  ' + quando + '   EUR ' + importo.toFixed(2) + '   ' + (v.metodoPagamento || '');
+});
+
+var motivo = fallite[0].errore || 'motivo non riportato';
+
+try {
+alert('VENDITE NON REGISTRATE: ' + fallite.length + '\n\n' +
+righe.join('\n') + '\n\n' +
+'Totale non registrato: EUR ' + totale.toFixed(2) + '\n\n' +
+'Motivo: ' + motivo + '\n\n' +
+'Le vendite sono salve sul tablet e il gestionale continua a riprovare da solo. ' +
+'NON ribatterle: entrerebbero due volte.\n\n' +
+'Premi la pillola blu Backup per metterne subito una copia su Drive.');
+} catch (e) {}
 };
 
 // Persistenza locale della coda: sopravvive a chiusura/reload della scheda.

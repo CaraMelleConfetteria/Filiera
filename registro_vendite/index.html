@@ -1208,6 +1208,43 @@ transform: translateX(300px);
 transform: translateX(0);
 }
 
+/* ═══ VENDITE NON REGISTRATE ═══
+   La quinta bandierina, e l'unica che vorresti non vedere mai. Occupa il
+   posto lasciato libero fra le quattro di stato e le notifiche di
+   passaggio: perche' e' uno stato, non un messaggio, e non se ne va da
+   sola. Resta finche' l'ultima vendita non e' entrata nel registro.
+   Rossa e pulsante: dal 5 settembre 2026 sappiamo che un avviso da tre
+   secondi, in mezzo a una fiera, non lo vede nessuno. */
+#venditeNonRegistrate {
+position: fixed;
+right: 10px;
+top: 138px;
+z-index: 1003;
+padding: 6px 14px;
+border-radius: 20px;
+font-size: 11px;
+font-weight: 700;
+letter-spacing: .02em;
+background: #c62828;
+color: white;
+box-shadow: 0 2px 10px rgba(198,40,40,0.45);
+white-space: nowrap;
+cursor: pointer;
+-webkit-tap-highlight-color: transparent;
+animation: allarmeVendite 1.6s ease-in-out infinite;
+}
+
+@keyframes allarmeVendite {
+0%, 100% { opacity: 1; }
+50%      { opacity: .55; }
+}
+
+/* Chi ha chiesto di non vedere animazioni non deve subirle: la pillola
+   resta comunque rossa e comunque li'. */
+@media (prefers-reduced-motion: reduce) {
+#venditeNonRegistrate { animation: none; }
+}
+
 /* ═══ FATTURE IN ATTESA DI SCARICO ═══
    Stessa famiglia delle notifiche qui sopra — pillola a destra che entra
    scorrendo — ma NON sparisce da sola: resta finché non premi Scarica.
@@ -1956,7 +1993,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=3';
+      s.src = 'app.js?v=4';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
