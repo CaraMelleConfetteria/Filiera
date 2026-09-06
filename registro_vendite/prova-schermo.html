@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Prova schermo cliente</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, HelveticaNeue, Helvetica, Arial, sans-serif;
+  background: #fff;
+  color: #1a1a1a;
+  padding: 20px;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+h1 { font-size: 21px; margin-bottom: 4px; }
+.sotto { color: #888; font-size: 14px; margin-bottom: 18px; }
+.riga {
+  border-top: 1px solid #eee;
+  padding: 10px 0;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+.che { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+.esito { font-weight: 700; }
+.si { color: #1e8e3e; }
+.no { color: #c62828; }
+.dett { font-size: 13px; color: #555; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<h1>Prova dello schermo cliente</h1>
+<div class="sotto">Questa pagina non mostra QR: controlla se questo apparecchio
+riesce a fare quello che serve, e scrive qui sotto che cosa non gli riesce.</div>
+
+<div id="referto"></div>
+
+<script>
+/* Tutto scritto come si scriveva nel 2014: niente fetch, niente promesse,
+   niente funzioni freccia. Se questa pagina non gira su un apparecchio,
+   quell'apparecchio non può fare da secondo schermo in nessun modo. */
+
+var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0SgePOlTU38Fqxklujy2AYipeK1963F5KCV4oaUUQK-7e/exec';
+var VERSIONE = 'prova-1';
+
+var referto = document.getElementById('referto');
+
+function scrivi(che, esito, buono, dettaglio) {
+  var d = document.createElement('div');
+  d.className = 'riga';
+  var a = document.createElement('div');
+  a.className = 'che';
+  a.appendChild(document.createTextNode(che));
+  var b = document.createElement('div');
+  b.className = 'esito ' + (buono === true ? 'si' : (buono === false ? 'no' : ''));
+  b.appendChild(document.createTextNode(esito));
+  d.appendChild(a);
+  d.appendChild(b);
+  if (dettaglio) {
+    var c = document.createElement('div');
+    c.className = 'dett';
+    c.appendChild(document.createTextNode(dettaglio));
+    d.appendChild(c);
+  }
+  referto.appendChild(d);
+}
+
+/* 1 — la pagina è arrivata, e quale */
+scrivi('1. Pagina caricata', 'SI, versione ' + VERSIONE, true);
+
+/* 2 — che apparecchio è */
+scrivi('2. Questo apparecchio', navigator.userAgent, null);
+
+/* 3 — sa telefonare? */
+var haXhr = (typeof XMLHttpRequest !== 'undefined');
+var haFetch = (typeof fetch !== 'undefined');
+scrivi('3. Sa telefonare (XMLHttpRequest)', haXhr ? 'SI' : 'NO', haXhr,
+       haFetch ? 'ha anche fetch' : 'non ha fetch (normale su iOS 9)');
+
+/* 4 — sa disegnare? */
+var haCanvas = false;
+try { haCanvas = !!document.createElement('canvas').getContext('2d'); } catch (e) {}
+scrivi('4. Sa disegnare il QR (canvas)', haCanvas ? 'SI' : 'NO', haCanvas);
+
+/* 5 — il gettone nell'indirizzo */
+var gettone = '';
+try {
+  var pezzi = String(location.search || '').replace(/^\?/, '').split('&');
+  for (var i = 0; i < pezzi.length; i++) {
+    var eq = pezzi[i].indexOf('=');
+    if (eq > 0 && pezzi[i].slice(0, eq) === 't') { gettone = decodeURIComponent(pezzi[i].slice(eq + 1)); break; }
+  }
+} catch (e) {}
+scrivi('5. Gettone nell’indirizzo',
+       gettone ? ('SI, ' + gettone.length + ' caratteri') : 'NO, manca',
+       gettone ? true : false,
+       gettone ? ('finisce con …' + gettone.slice(-8)) : 'apri l’indirizzo completo, con ?t= in fondo');
+
+/* 6 — la telefonata vera al motore: è QUI che ci aspettiamo il guaio */
+if (!haXhr) {
+  scrivi('6. Telefonata al motore', 'IMPOSSIBILE', false, 'questo apparecchio non sa telefonare');
+} else {
+  scrivi('6. Telefonata al motore', 'in corso…', null);
+  var quando = new Date().getTime();
+  var x = new XMLHttpRequest();
+  try {
+    x.open('POST', MOTORE, true);
+    x.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      var ms = new Date().getTime() - quando;
+      var testo = '';
+      try { testo = String(x.responseText || ''); } catch (e2) { testo = '(illeggibile)'; }
+      referto.removeChild(referto.lastChild);
+      if (x.status >= 200 && x.status < 300) {
+        var buona = testo.indexOf('"success"') >= 0;
+        scrivi('6. Telefonata al motore',
+               buona ? 'RIUSCITA' : 'risposta strana',
+               buona, 'in ' + ms + ' ms — ' + testo.substring(0, 220));
+      } else {
+        scrivi('6. Telefonata al motore', 'RIFIUTATA, codice ' + x.status, false,
+               'in ' + ms + ' ms — ' + testo.substring(0, 220));
+      }
+    };
+    x.onerror = function () {
+      referto.removeChild(referto.lastChild);
+      scrivi('6. Telefonata al motore', 'NON PARTITA', false,
+             'il browser l’ha bloccata: quasi sempre e’ il rimbalzo di Apps Script ' +
+             'che questo Safari non segue, oppure il collegamento sicuro che non regge');
+    };
+    x.ontimeout = function () {
+      referto.removeChild(referto.lastChild);
+      scrivi('6. Telefonata al motore', 'NESSUNA RISPOSTA', false, 'oltre 20 secondi');
+    };
+    x.timeout = 20000;
+    x.send(JSON.stringify({ azione: 'satispaySchermo', token: gettone }));
+  } catch (e3) {
+    referto.removeChild(referto.lastChild);
+    scrivi('6. Telefonata al motore', 'ERRORE', false, String(e3));
+  }
+}
+
+/* 7 — e una telefonata a una pagina dello stesso sito, per distinguere
+       "non sa telefonare" da "non sa telefonare A GOOGLE" */
+if (haXhr) {
+  var y = new XMLHttpRequest();
+  try {
+    y.open('GET', 'cliente.html?prova=' + new Date().getTime(), true);
+    y.onreadystatechange = function () {
+      if (y.readyState !== 4) return;
+      var ok = (y.status >= 200 && y.status < 300);
+      scrivi('7. Telefonata allo stesso sito', ok ? 'RIUSCITA' : ('codice ' + y.status), ok,
+             ok ? 'quindi la rete c’e’: se la 6 fallisce, il problema e’ verso Google'
+                : 'non raggiunge nemmeno il proprio sito');
+    };
+    y.onerror = function () { scrivi('7. Telefonata allo stesso sito', 'NON PARTITA', false); };
+    y.send();
+  } catch (e4) {
+    scrivi('7. Telefonata allo stesso sito', 'ERRORE', false, String(e4));
+  }
+}
+</script>
+</body>
+</html>
