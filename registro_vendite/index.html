@@ -1726,6 +1726,15 @@ style="flex: 1;">
 <span class="payment-name">SumUp</span>
 </button>
 </div>
+
+<!-- Satispay col QR sul secondo schermo. Compare solo con Satispay
+     selezionato. Il QR non e' qui: e' sul monitor girato verso il
+     cliente, e parte da solo. Qui c'e' la riga che dice a che punto
+     siamo, e un pulsante che serve solo ad annullare o a riprovare. -->
+<div id="satispayBlocco" class="hidden">
+<button type="button" class="satispay-btn hidden" id="btnSatispayChiedi"></button>
+<div class="satispay-riga" id="satispayStato"></div>
+</div>
 </div>
 
 <div class="form-group">
@@ -1834,6 +1843,34 @@ placeholder="Banconota (€)">
 .accesso-riquadro { text-align: center; max-width: 340px; width: 100%; }
 .accesso-riquadro h2 { margin: 0 0 10px; font-size: 20px; color: #333; }
 #accessoMessaggio { margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: #666; }
+/* ─── Satispay col QR sul secondo schermo ─── */
+#satispayBlocco { margin-top: 14px; }
+.satispay-btn {
+  width: 100%;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: #ff8c42;
+  border: 2px solid #ff8c42;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.satispay-btn:disabled { opacity: .55; cursor: default; }
+.satispay-btn.annulla { background: #fff; color: #c62828; border-color: #c62828; }
+.satispay-riga {
+  margin-top: 10px;
+  min-height: 18px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #666;
+  text-align: center;
+}
+.satispay-riga.verde { color: #1e8e3e; font-weight: 600; }
+.satispay-riga.rosso { color: #c62828; }
+
 #accessoBottone { display: flex; justify-content: center; min-height: 44px; }
 .accesso-nota { margin-top: 18px; font-size: 12px; line-height: 1.5; color: #c62828; min-height: 18px; }
 .accesso-nota.attesa { color: #666; }
@@ -1966,6 +2003,12 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     window.__LOGO__   = configIniziale.logo || '';
     installaPonte();
 
+    // Il finto google.script.run copia una vecchia forma di chiamata, fatta
+    // di gestori da agganciare; per le cose nuove — Satispay — si passa di
+    // qui, che e' la stessa chiamata ma con una promessa, senza dover
+    // allungare l'elenco AZIONI ogni volta.
+    window.__CHIAMA__ = chiama;
+
     // Trappola, e non teorica: il gestionale si aggancia all'evento
     // "documento pronto" in sei punti, fra cui quelli che disegnano i
     // prodotti e collegano i pulsanti. Ma app.js viene caricato a mano, e un
@@ -1993,7 +2036,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=4';
+      s.src = 'app.js?v=5';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');

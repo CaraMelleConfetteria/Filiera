@@ -1103,6 +1103,11 @@ toggleCalcoloResto();
 // soprattutto — l'anagrafica resta in memoria. Va azzerata anche quella, se no
 // la vendita successiva parte col negozio precedente gia' agganciato.
 if (typeof window.azzeraNegozio === 'function') window.azzeraNegozio();
+
+// Satispay torna a riposo e lo schermo del cliente al marchio: se resta
+// acceso il "PAGATO" della vendita precedente, il cliente dopo lo legge
+// come suo.
+if (window.satispay) window.satispay.aRiposo();
 }
 
 function renderConfezionati() {
@@ -1416,6 +1421,11 @@ totaleElement.textContent = '€' + totaleFinale.toFixed(2).replace('.', ',');
 
 calcolaResto();
 aggiornaPulsanteDinamico();
+
+// Satispay: il totale e' cambiato, e il QR sullo schermo del cliente deve
+// inseguirlo. Aspetta un attimo prima di rifarlo — mentre si battono tre
+// prodotti questo punto passa tre volte.
+if (window.satispay) window.satispay.totaleCambiato();
 }
 
 function validaNumeroEAggiorna(input) {
@@ -1490,6 +1500,8 @@ button.classList.add('selected');
 }
 
 toggleCalcoloResto();
+// Satispay: scegliendolo il QR parte da solo, lasciandolo si spegne.
+if (window.satispay) window.satispay.cambiaMetodo();
 button.blur();
 }
 
@@ -1630,7 +1642,16 @@ if (telefonoValido && !hasProdotti) {
 invitaSoloWhatsApp();
 return;
 }
-  
+
+// Satispay: se il cliente non ha ancora confermato, la vendita non si
+// registra. Il pulsante e' gia' spento, ma qui si ricontrolla: e' la
+// serratura che conta, quella sul pulsante e' solo quella che si vede.
+var _bloccoSatispay = window.satispay ? window.satispay.motivoBlocco() : null;
+if (_bloccoSatispay) {
+alert(_bloccoSatispay);
+return;
+}
+
 var cliente = document.getElementById("cliente").value.trim();
 var condividiWhatsapp = document.getElementById("whatsapp") ? document.getElementById("whatsapp").checked : false;
 var inputPersonalizzato = parseFloat(document.getElementById("personalizzato").value);
@@ -2826,5 +2847,345 @@ salvaReport();
         progressivo: 'PROVA', dataOra: 'prova di stampa'
       });
     }
+  };
+})();
+
+
+/* ═════ SATISPAY — IL LATO BANCO ═══════════════════════════════════
+   Il QR non compare qui: compare sullo schermo girato verso il cliente,
+   che è un'altra pagina su un altro dispositivo. Da questa parte c'è solo
+   una riga che dice a che punto siamo, e il pulsante «Registra Vendita»
+   che si accende quando il cliente ha pagato.
+
+   I due schermi non si parlano fra loro — sono due browser diversi, e in
+   mezzo c'è internet. Parlano tutti e due col motore, che tiene una riga
+   di stato condivisa: qui la si scrive, di là la si legge.
+
+   Il QR si chiede DA SOLO appena si sceglie Satispay, e si rifà da solo
+   se il carrello cambia: un codice creato per 12,40 e lasciato a schermo
+   mentre il totale diventa 19,00 farebbe pagare al cliente la cifra
+   sbagliata. Per questo il QR insegue sempre il totale, e per questo si
+   aspetta un attimo prima di crearlo — se no battere tre prodotti di fila
+   creerebbe e annullerebbe tre pagamenti.
+
+   Regola: il pulsante «Registra Vendita» si spegne SOLO mentre c'è un QR
+   vivo a schermo. Se il cliente paga inquadrando il QR fisso del banco —
+   come si è sempre fatto — qui non passa niente e non si blocca niente.
+   ═══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var RITMO_MS = 2000;          // ogni quanto si chiede al motore com'è andata
+  var RITMO_GUASTO_MS = 4000;   // se il motore non risponde, si rallenta
+  var ATTESA_TOTALE_MS = 1200;  // quanto si aspetta che il carrello si fermi
+
+  // fermo · chiedendo · attesa (QR vivo) · pagato · errore
+  var stato = 'fermo';
+  var importo = 0;
+  var messaggio = '';
+  var timer = null;             // il giro di domande al motore
+  var timerTotale = null;       // l'attesa che il carrello si fermi
+
+  function motore(azione, args) {
+    if (typeof window.__CHIAMA__ !== 'function') {
+      return Promise.reject(new Error('Motore non collegato: ricarica la pagina'));
+    }
+    return window.__CHIAMA__(azione, args || []);
+  }
+
+  function blocco()  { return document.getElementById('satispayBlocco'); }
+  function bottone() { return document.getElementById('btnSatispayChiedi'); }
+  function riga()    { return document.getElementById('satispayStato'); }
+
+  /* Il pulsante «Registra Vendita» vero, quello visibile: è lo stesso che
+     cerca invia(), così non si finisce a spegnerne uno nascosto. */
+  function pulsanteVendita() {
+    var tutti = document.querySelectorAll('.submit-btn');
+    for (var i = 0; i < tutti.length; i++) {
+      if (!tutti[i].closest('.hidden')) return tutti[i];
+    }
+    return document.getElementById('btnRegistraVendita');
+  }
+
+  function euro(n) {
+    return '€' + Number(n || 0).toFixed(2).replace('.', ',');
+  }
+
+  function totaleAschermo() {
+    var el = document.getElementById('totale');
+    if (!el) return 0;
+    return parseFloat(el.textContent.replace('€', '').replace(',', '.')) || 0;
+  }
+
+  /* ─── quello che si vede ───────────────────────────────────────── */
+
+  function disegna() {
+    var b = blocco(), p = bottone(), r = riga();
+    if (!b || !p || !r) return;
+
+    var attivo = (metodoPagamentoSelezionato === 'Satispay');
+    b.classList.toggle('hidden', !attivo);
+
+    // Il pulsante serve solo per annullare o per riprovare: chiedere il QR
+    // non è più un gesto, succede da sé.
+    if (stato === 'attesa') {
+      p.textContent = 'Annulla il pagamento';
+      p.className = 'satispay-btn annulla';
+      p.disabled = false;
+      p.classList.remove('hidden');
+    } else if (stato === 'errore') {
+      p.textContent = 'Riprova';
+      p.className = 'satispay-btn';
+      p.disabled = false;
+      p.classList.remove('hidden');
+    } else if (stato === 'chiedendo') {
+      p.textContent = 'Un momento...';
+      p.className = 'satispay-btn';
+      p.disabled = true;
+      p.classList.remove('hidden');
+    } else {
+      p.className = 'satispay-btn hidden';
+    }
+
+    r.textContent = messaggio;
+    r.className = 'satispay-riga' +
+      (stato === 'pagato' ? ' verde' : '') +
+      (stato === 'errore' ? ' rosso' : '');
+
+    aggiornaPulsanteVendita();
+  }
+
+  /**
+   * «Registra Vendita» resta spento finché il cliente non ha pagato.
+   *
+   * Si spegne SOLO nello stato 'attesa', cioè con un QR vivo sullo schermo
+   * del cliente: registrare in quel momento vorrebbe dire dare per
+   * incassato un pagamento che il cliente può ancora confermare o no.
+   *
+   * In ogni altro stato — compreso un guasto, la rete giù, un annullamento
+   * — il pulsante torna acceso. È voluto: un difetto del gestionale non
+   * deve mai poter fermare la fila al banco.
+   */
+  function aggiornaPulsanteVendita() {
+    var p = pulsanteVendita();
+    if (!p) return;
+    var daBloccare = (metodoPagamentoSelezionato === 'Satispay' && stato === 'attesa');
+    if (daBloccare) {
+      p.disabled = true;
+      p.style.opacity = '0.5';
+      p.style.pointerEvents = 'none';
+    } else if (p.dataset.satispayBloccato === '1') {
+      p.disabled = false;
+      p.style.opacity = '';
+      p.style.pointerEvents = '';
+    }
+    p.dataset.satispayBloccato = daBloccare ? '1' : '0';
+  }
+
+  /* ─── il ciclo di attesa ───────────────────────────────────────── */
+
+  function ferma() {
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+
+  function guarda() {
+    ferma();
+    motore('satispayStato', []).then(function (s) {
+      if (stato !== 'attesa') return;
+
+      if (!s || !s.success) {
+        messaggio = 'Satispay: ' + ((s && s.errore) || 'non risponde') + ' — il QR è ancora a schermo';
+        disegna();
+        timer = setTimeout(guarda, RITMO_GUASTO_MS);
+        return;
+      }
+
+      if (s.stato === 'pagato') {
+        stato = 'pagato';
+        importo = s.importo;
+        messaggio = 'PAGATO ' + euro(s.importo) + ' — ora puoi registrare la vendita';
+        disegna();
+        return;
+      }
+
+      if (s.stato === 'scaduto' || s.stato === 'annullato' || s.stato === 'attesa') {
+        stato = 'errore';
+        messaggio = (s.stato === 'scaduto')
+          ? 'Il codice è scaduto: premi Riprova'
+          : 'Pagamento annullato';
+        disegna();
+        return;
+      }
+
+      var mancano = Math.round((s.mancano || 0) / 1000);
+      messaggio = 'In attesa che il cliente confermi ' + euro(s.importo) +
+                  (mancano > 0 ? ' — ' + mancano + 's' : '');
+      if (s.errore) messaggio += ' (rete instabile)';
+      disegna();
+      timer = setTimeout(guarda, RITMO_MS);
+
+    }, function () {
+      if (stato !== 'attesa') return;
+      messaggio = 'Motore non raggiungibile — il QR è ancora a schermo';
+      disegna();
+      timer = setTimeout(guarda, RITMO_GUASTO_MS);
+    });
+  }
+
+  /* ─── chiedere e annullare ─────────────────────────────────────── */
+
+  function chiedi() {
+    var totale = totaleAschermo();
+    if (!(totale > 0)) return;
+
+    stato = 'chiedendo';
+    messaggio = 'Sto preparando il QR...';
+    disegna();
+
+    var cliente = (document.getElementById('cliente') || {}).value || '';
+
+    motore('satispayAvvia', [totale, cliente.trim()]).then(function (s) {
+      if (!s || !s.success) {
+        stato = 'errore';
+        messaggio = (s && s.errore) || 'Satispay non ha accettato la richiesta';
+        disegna();
+        return;
+      }
+      stato = 'attesa';
+      importo = s.importo;
+      messaggio = 'QR sullo schermo del cliente — ' + euro(s.importo);
+      disegna();
+      timer = setTimeout(guarda, RITMO_MS);
+
+    }, function () {
+      // Senza rete il pagamento non si può creare. Non è un guasto del
+      // gestionale: si incassa col QR fisso del banco come sempre, e la
+      // vendita si registra normalmente.
+      stato = 'errore';
+      messaggio = 'Satispay non raggiungibile: incassa col QR fisso del banco';
+      disegna();
+    });
+  }
+
+  function annulla(poiRifai) {
+    ferma();
+    stato = 'chiedendo';
+    messaggio = 'Sto annullando...';
+    disegna();
+
+    motore('satispayAnnulla', []).then(function (s) {
+      if (poiRifai) { stato = 'fermo'; messaggio = ''; chiedi(); return; }
+      stato = (s && s.success) ? 'fermo' : 'errore';
+      messaggio = (s && s.success) ? '' : ((s && s.errore) || 'Annullamento non riuscito');
+      disegna();
+    }, function () {
+      stato = 'errore';
+      messaggio = 'Annullamento non riuscito: controlla lo schermo del cliente';
+      disegna();
+    });
+  }
+
+  /**
+   * Decide che cosa deve esserci sullo schermo del cliente, adesso.
+   *
+   * La chiamano sia la scelta del metodo sia ogni modifica del carrello, e
+   * si prende un attimo prima di agire: mentre si battono tre prodotti il
+   * totale cambia tre volte, e non ha senso creare e annullare tre
+   * pagamenti su Satispay per arrivare allo stesso posto.
+   */
+  function valuta() {
+    if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+
+    if (metodoPagamentoSelezionato !== 'Satispay') return;
+    if (stato === 'pagato' || stato === 'chiedendo') return;
+
+    var totale = totaleAschermo();
+
+    // Carrello svuotato con un QR a schermo: quel codice non deve
+    // sopravvivere al carrello per cui era nato.
+    if (!(totale > 0)) {
+      if (stato === 'attesa') annulla(false);
+      return;
+    }
+
+    // Il QR che c'è è già quello giusto.
+    if (stato === 'attesa' && Math.abs(importo - totale) < 0.005) return;
+
+    timerTotale = setTimeout(function () {
+      timerTotale = null;
+      if (metodoPagamentoSelezionato !== 'Satispay') return;
+      if (stato === 'attesa') annulla(true);   // annulla il vecchio e rifà
+      else chiedi();
+    }, ATTESA_TOTALE_MS);
+  }
+
+  /* ─── quello che chiama il resto del gestionale ─────────────────── */
+
+  // Il metodo di pagamento è cambiato. Scegliendo Satispay il QR parte da
+  // solo; lasciandolo, un QR ancora vivo va spento — il cliente sta per
+  // pagare in un altro modo e nessuno deve poterlo inquadrare per sbaglio.
+  function cambiaMetodo() {
+    if (metodoPagamentoSelezionato === 'Satispay') {
+      if (stato === 'errore') { stato = 'fermo'; messaggio = ''; }
+      disegna();
+      valuta();
+    } else {
+      if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+      if (stato === 'attesa') annulla(false);
+      else if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
+      disegna();
+    }
+  }
+
+  // Il carrello è cambiato: il QR insegue il totale.
+  function totaleCambiato() {
+    valuta();
+  }
+
+  // Perché la vendita non si può registrare adesso. null = si può.
+  // Il pulsante è già spento, ma invia() lo richiede lo stesso: due
+  // serrature sulla stessa porta, perché quella che conta è questa.
+  function motivoBlocco() {
+    if (metodoPagamentoSelezionato === 'Satispay' && stato === 'attesa') {
+      return 'Il cliente non ha ancora confermato il pagamento di ' + euro(importo) + '.\n\n' +
+             'Aspetta la conferma, oppure annulla il pagamento.';
+    }
+    return null;
+  }
+
+  // Vendita registrata (o modulo azzerato): si spegne tutto e lo schermo
+  // del cliente torna al marchio, pronto per il prossimo.
+  function aRiposo() {
+    ferma();
+    if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+    var daLiberare = (stato === 'pagato' || stato === 'attesa');
+    var eraInAttesa = (stato === 'attesa');
+    stato = 'fermo';
+    importo = 0;
+    messaggio = '';
+    disegna();
+    if (!daLiberare) return;
+    // Un QR ancora vivo si annulla; un pagamento già incassato si libera
+    // soltanto, che è un'altra cosa e non tocca i soldi.
+    motore(eraInAttesa ? 'satispayAnnulla' : 'satispayLibera', []).then(function () {}, function () {});
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var p = bottone();
+    if (p) {
+      p.addEventListener('click', function () {
+        if (stato === 'attesa') annulla(false);
+        else if (stato === 'errore') { stato = 'fermo'; messaggio = ''; disegna(); chiedi(); }
+      });
+    }
+    disegna();
+  });
+
+  window.satispay = {
+    cambiaMetodo: cambiaMetodo,
+    totaleCambiato: totaleCambiato,
+    motivoBlocco: motivoBlocco,
+    aRiposo: aRiposo,
+    stato: function () { return stato; }
   };
 })();
