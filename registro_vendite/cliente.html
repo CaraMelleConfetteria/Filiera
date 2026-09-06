@@ -78,11 +78,23 @@ body {
    (quadrato bianco di 230x230 su una locandina di 1300x1844). Se un giorno
    si ridisegna la locandina spostando il quadrato, sono queste le righe da
    rifare — e nient'altro. */
-#qr { background: #EF5646; }   /* lo stesso rosso della locandina: le fasce ai lati spariscono */
+#qr {
+  background: #EF5646;   /* lo stesso rosso della locandina: le fasce ai lati spariscono */
+  padding: 0;            /* la locandina arriva ai bordi: quello che avanza e' gia' rosso */
+}
 
+/* Il riquadro che tiene insieme locandina e QR.
+   `flex: 0 0 auto` non e' un dettaglio: senza, i Safari vecchi lo
+   stringono piu' corto dell'immagine che contiene — la regola che glielo
+   impedisce (min-height automatica) e' arrivata dopo di loro. E siccome il
+   QR e' posizionato in percentuale SU QUESTO riquadro, un riquadro piu'
+   corto lo faceva finire troppo in alto e troppo piccolo, scoprendo il
+   quadrato bianco della locandina li' sotto. Due quadrati bianchi invece
+   di uno: e' successo davvero, su un iPad con iOS 9. */
 .foglio {
   position: relative;
-  display: inline-block;
+  display: block;
+  flex: 0 0 auto;
   line-height: 0;
 }
 .foglio img {
@@ -576,9 +588,9 @@ var QR = (function () {
    dimensione la locandina venga mostrata.
    Si rifanno solo se si ridisegna la locandina spostando il quadrato.     */
 var QR_SINISTRA = 36.615;   // % dal bordo sinistro dell'immagine
-var QR_ALTO     = 52.874;   // % dal bordo alto
+var QR_ALTO     = 52.932;   // % dal bordo alto
 var QR_LARGO    = 17.615;   // % della larghezza
-var QR_ALTEZZA  = 12.419;   // % dell'altezza
+var QR_ALTEZZA  = 12.432;   // % dell'altezza
 
 /* Quanto il QR deborda dal quadrato bianco. 1 = lo riempie esatto, come
    nel disegno. Alzandolo il codice diventa piu' grande e si porta dietro
