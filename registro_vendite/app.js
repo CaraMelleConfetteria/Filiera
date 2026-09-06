@@ -2948,9 +2948,33 @@ salvaReport();
     }
 
     r.textContent = messaggio;
-    r.className = 'satispay-riga' +
-      (stato === 'pagato' ? ' verde' : '') +
-      (stato === 'errore' ? ' rosso' : '');
+    r.className = 'satispay-riga' + (stato === 'errore' ? ' rosso' : '');
+
+    // Il pulsante Satispay dice da solo com'e' andata: VERDE se il cliente
+    // ha pagato, ROSSO se qualcosa non e' andato. Torna arancione appena si
+    // riparte. E' l'unico avviso che resta a schermo, e non c'e' niente da
+    // leggere per sapere se si puo' andare avanti — il perche', quando
+    // serve, sta nella riga qui sotto.
+    //
+    // Rosso vuol dire "questo pagamento non c'e' stato, fai qualcosa".
+    // Mentre il QR e' ancora vivo e il motore fa i capricci il pulsante
+    // resta arancione, anche se la riga lo dice: li' il cliente puo' ancora
+    // pagare da un momento all'altro, e dare per fallito un pagamento che
+    // magari sta riuscendo sarebbe peggio che non dire niente.
+    var tasto = document.getElementById('btnSatispay');
+    if (tasto) {
+      var suDiLui = (metodoPagamentoSelezionato === 'Satispay');
+      if (suDiLui && stato === 'pagato') {
+        tasto.classList.add('pagato');
+        tasto.classList.remove('guasto');
+      } else if (suDiLui && stato === 'errore') {
+        tasto.classList.add('guasto');
+        tasto.classList.remove('pagato');
+      } else {
+        tasto.classList.remove('pagato');
+        tasto.classList.remove('guasto');
+      }
+    }
 
     aggiornaPulsanteVendita();
   }
@@ -3003,7 +3027,10 @@ salvaReport();
       if (s.stato === 'pagato') {
         stato = 'pagato';
         importo = s.importo;
-        messaggio = 'PAGATO ' + euro(s.importo) + ' — ora puoi registrare la vendita';
+        // Nessuna frase: lo dice il pulsante Satispay diventando verde.
+        // Una riga di testo in piu' e' una cosa da leggere proprio nel
+        // momento in cui si ha il cliente davanti e le mani occupate.
+        messaggio = '';
         disegna();
         return;
       }
@@ -3174,8 +3201,25 @@ salvaReport();
     var p = bottone();
     if (p) {
       p.addEventListener('click', function () {
-        if (stato === 'attesa') annulla(false);
-        else if (stato === 'errore') { stato = 'fermo'; messaggio = ''; disegna(); chiedi(); }
+        if (stato === 'attesa') {
+          // Annullare vuol dire che il cliente paga in un altro modo: si
+          // lascia libero anche il metodo, se no bisogna ricordarsi di
+          // toccarlo una seconda volta prima di poter scegliere Contanti.
+          //
+          // Si passa da togglePagamento — la stessa funzione dei tre
+          // pulsanti — invece di spegnere la selezione a mano: cosi' il
+          // resto del gestionale (il calcolo del resto, il pulsante
+          // dinamico) si aggiorna come se il tasto lo avessi premuto tu.
+          // E' quella funzione a richiamare cambiaMetodo, che manda
+          // l'annullamento vero a Satispay.
+          if (typeof togglePagamento === 'function' && metodoPagamentoSelezionato === 'Satispay') {
+            togglePagamento('Satispay');
+          } else {
+            annulla(false);
+          }
+        } else if (stato === 'errore') {
+          stato = 'fermo'; messaggio = ''; disegna(); chiedi();
+        }
       });
     }
     disegna();
