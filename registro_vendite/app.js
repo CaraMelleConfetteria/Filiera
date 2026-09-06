@@ -1108,6 +1108,7 @@ if (typeof window.azzeraNegozio === 'function') window.azzeraNegozio();
 // acceso il "PAGATO" della vendita precedente, il cliente dopo lo legge
 // come suo.
 if (window.satispay) window.satispay.aRiposo();
+if (window.sumup) window.sumup.aRiposo();
 }
 
 function renderConfezionati() {
@@ -1431,6 +1432,7 @@ aggiornaPagamentoDisponibile();
 // inseguirlo. Aspetta un attimo prima di rifarlo — mentre si battono tre
 // prodotti questo punto passa tre volte.
 if (window.satispay) window.satispay.totaleCambiato();
+if (window.sumup) window.sumup.totaleCambiato();
 }
 
 function validaNumeroEAggiorna(input) {
@@ -1601,6 +1603,7 @@ button.classList.add('selected');
 toggleCalcoloResto();
 // Satispay: scegliendolo il QR parte da solo, lasciandolo si spegne.
 if (window.satispay) window.satispay.cambiaMetodo();
+if (window.sumup) window.sumup.cambiaMetodo();
 button.blur();
 }
 
@@ -1717,7 +1720,8 @@ return;
 // Satispay: se il cliente non ha ancora confermato, la vendita non si
 // registra. Il pulsante e' gia' spento, ma qui si ricontrolla: e' la
 // serratura che conta, quella sul pulsante e' solo quella che si vede.
-var _bloccoSatispay = window.satispay ? window.satispay.motivoBlocco() : null;
+var _bloccoSatispay = (window.satispay ? window.satispay.motivoBlocco() : null) ||
+                      (window.sumup ? window.sumup.motivoBlocco() : null);
 if (_bloccoSatispay) {
 alert(_bloccoSatispay);
 return;
@@ -1820,6 +1824,9 @@ metodoPagamento: metodoPagamentoSelezionato,
 // che resta permessa apposta, perche' un guasto non deve fermare la fila,
 // ma che da qui in avanti si vede nel registro invece di sparire.
 rifSatispay: (window.satispay ? window.satispay.riferimento() : ''),
+// Stessa cosa per SumUp: o c'e' l'identificativo della transazione, o nel
+// registro restera' scritto che quell'incasso non e' mai stato confermato.
+rifSumUp: (window.sumup ? window.sumup.riferimento() : ''),
 // Bandierina FISCALITÀ: false solo se l'operatrice l'ha messa sul rosso.
 // Il server controlla `!== false`, quindi se questo campo non arrivasse
 // affatto — vendita rimasta in coda da prima, client vecchio — i documenti
@@ -3328,6 +3335,436 @@ salvaReport();
   });
 
   window.satispay = {
+    cambiaMetodo: cambiaMetodo,
+    totaleCambiato: totaleCambiato,
+    motivoBlocco: motivoBlocco,
+    riferimento: function () { return (stato === 'pagato') ? riferimentoPagato : ''; },
+    aRiposo: aRiposo,
+    stato: function () { return stato; }
+  };
+})();
+
+
+/* ═════ SUMUP — L'IMPORTO MANDATO AL LETTORE ════════════════════════
+   Scegliendo SumUp il Solo si accende da solo con la cifra giusta: la
+   cassiera non digita più niente, e l'importo addebitato coincide col
+   totale del registro per costruzione.
+
+   TRE DIFFERENZE DA SATISPAY, tutte dovute al fatto che qui c'è un
+   apparecchio fisico con sopra le mani del cliente.
+
+   1. NON insegue il totale. Il QR è passivo: si rifà e nessuno se ne
+      accorge. Il lettore no — cambiargli la cifra sotto le dita mentre il
+      cliente sta per appoggiare la carta è il modo migliore per fargli
+      pagare l'importo sbagliato. E SumUp, dopo un invio, si prende 60
+      secondi in cui rifiuta qualunque altro invio allo stesso lettore:
+      annullare e rimandare subito finirebbe in un rifiuto proprio nel
+      momento peggiore. Quindi se il totale cambia si annulla e si dice
+      di ripremere.
+
+   2. Se l'annullo NON riesce, SumUp resta selezionato e il pulsante
+      diventa rosso. È la regola più importante di tutto il file: se il
+      lettore non si è fermato il cliente può ancora pagare da un momento
+      all'altro, e lasciar scegliere «Contanti» in quel momento vuol dire
+      incassare due volte lo stesso cliente.
+
+   3. Il lettore È lo schermo del cliente: non c'è nessun secondo schermo
+      da tenere sincronizzato.
+   ═══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var RITMO_MS = 2000;
+  var RITMO_GUASTO_MS = 4000;
+  var ATTESA_TOTALE_MS = 1200;
+
+  // fermo · chiedendo · lettore (cifra sul Solo) · pagato · errore
+  var stato = 'fermo';
+  var importo = 0;
+  var messaggio = '';
+  var altruiInCorso = false;
+  var riferimentoPagato = '';
+  // Il lettore non si è fermato quando glielo abbiamo chiesto. Finché è
+  // vero, questo metodo di pagamento NON si lascia.
+  var lettoreNonFermato = false;
+
+  var timer = null;
+  var timerTotale = null;
+
+  function motore(azione, args) {
+    if (typeof window.__CHIAMA__ !== 'function') {
+      return Promise.reject(new Error('Motore non collegato: ricarica la pagina'));
+    }
+    return window.__CHIAMA__(azione, args || []);
+  }
+
+  function blocco()  { return document.getElementById('sumupBlocco'); }
+  function bottone() { return document.getElementById('btnSumUpChiedi'); }
+  function riga()    { return document.getElementById('sumupStato'); }
+
+  function pulsanteVendita() {
+    var tutti = document.querySelectorAll('.submit-btn');
+    for (var i = 0; i < tutti.length; i++) {
+      if (!tutti[i].closest('.hidden')) return tutti[i];
+    }
+    return document.getElementById('btnRegistraVendita');
+  }
+
+  function euro(n) {
+    return '€' + Number(n || 0).toFixed(2).replace('.', ',');
+  }
+
+  function totaleAschermo() {
+    var t = document.getElementById('totale');
+    if (!t) return 0;
+    var n = parseFloat(String(t.textContent || '').replace('€', '').replace(/\./g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+
+  function ferma() {
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+
+  function disegna() {
+    var b = blocco(), p = bottone(), r = riga();
+    if (!b || !p || !r) return;
+
+    var attivo = (metodoPagamentoSelezionato === 'SumUp');
+    b.classList.toggle('hidden', !attivo);
+
+    if (stato === 'lettore') {
+      p.textContent = 'Annulla sul lettore';
+      p.className = 'satispay-btn annulla';
+      p.disabled = false;
+      p.classList.remove('hidden');
+    } else if (stato === 'errore') {
+      p.textContent = altruiInCorso ? 'Annulla il pagamento in corso' : 'Riprova';
+      p.className = 'satispay-btn' + (altruiInCorso ? ' annulla' : '');
+      p.disabled = false;
+      p.classList.remove('hidden');
+    } else if (stato === 'chiedendo') {
+      p.textContent = 'Un momento...';
+      p.className = 'satispay-btn';
+      p.disabled = true;
+      p.classList.remove('hidden');
+    } else {
+      p.className = 'satispay-btn hidden';
+    }
+
+    r.textContent = messaggio;
+    r.className = 'satispay-riga' + (stato === 'errore' ? ' rosso' : '');
+
+    // Il pulsante SumUp dice da solo com'è andata, come quello di Satispay:
+    // verde se il cliente ha pagato, rosso se qualcosa non è andato.
+    // Mentre la cifra è sul lettore resta arancione anche se il motore fa i
+    // capricci: lì il cliente può ancora pagare da un momento all'altro.
+    var tasto = document.getElementById('btnSumUp');
+    if (tasto) {
+      var suDiLui = (metodoPagamentoSelezionato === 'SumUp');
+      if (suDiLui && stato === 'pagato') {
+        tasto.classList.add('pagato');
+        tasto.classList.remove('guasto');
+      } else if (suDiLui && stato === 'errore') {
+        tasto.classList.add('guasto');
+        tasto.classList.remove('pagato');
+      } else {
+        tasto.classList.remove('pagato');
+        tasto.classList.remove('guasto');
+      }
+    }
+
+    aggiornaPulsanteVendita();
+  }
+
+  /**
+   * «Registra Vendita» si spegne SOLO mentre la cifra è sul lettore.
+   * In ogni altro stato torna acceso: un difetto del gestionale non deve
+   * mai poter fermare la fila al banco.
+   */
+  function aggiornaPulsanteVendita() {
+    var p = pulsanteVendita();
+    if (!p) return;
+    var daBloccare = (metodoPagamentoSelezionato === 'SumUp' && stato === 'lettore');
+    if (daBloccare) {
+      p.disabled = true;
+      p.style.opacity = '0.5';
+      p.style.pointerEvents = 'none';
+      p.dataset.sumupBloccato = '1';
+    } else if (p.dataset.sumupBloccato === '1') {
+      p.disabled = false;
+      p.style.opacity = '';
+      p.style.pointerEvents = '';
+      delete p.dataset.sumupBloccato;
+    }
+  }
+
+  function chiedi() {
+    var totale = totaleAschermo();
+    if (!(totale > 0)) return;
+
+    ferma();
+    stato = 'chiedendo';
+    messaggio = 'Mando l\'importo al lettore...';
+    disegna();
+
+    var cliente = '';
+    var c = document.getElementById('cliente');
+    if (c) cliente = String(c.value || '').trim();
+
+    motore('sumupAvvia', [totale, cliente]).then(function (s) {
+      if (!s || !s.success) {
+        stato = 'errore';
+        altruiInCorso = !!(s && s.inCorso);
+        messaggio = (s && s.errore) || 'SumUp non ha accettato la richiesta';
+        disegna();
+        return;
+      }
+      altruiInCorso = false;
+      riferimentoPagato = '';
+      lettoreNonFermato = false;
+      stato = 'lettore';
+      importo = s.importo;
+      messaggio = 'Sul lettore ci sono ' + euro(s.importo) + ' — fai appoggiare la carta';
+      disegna();
+      timer = setTimeout(guarda, RITMO_MS);
+    }, function (err) {
+      stato = 'errore';
+      messaggio = String((err && err.message) || 'Il motore non risponde');
+      disegna();
+    });
+  }
+
+  function guarda() {
+    ferma();
+    motore('sumupStato', []).then(function (s) {
+      if (stato !== 'lettore') return;
+
+      if (!s || !s.success) {
+        messaggio = 'SumUp: ' + ((s && s.errore) || 'non risponde') +
+                    ' — la cifra è ancora sul lettore';
+        disegna();
+        timer = setTimeout(guarda, RITMO_GUASTO_MS);
+        return;
+      }
+
+      if (s.stato === 'pagato') {
+        stato = 'pagato';
+        importo = s.importo;
+        riferimentoPagato = s.riferimento || '';
+        // Nessuna frase: lo dice il pulsante SumUp diventando verde.
+        messaggio = '';
+        disegna();
+        return;
+      }
+
+      if (s.stato === 'annullato' || s.stato === 'scaduto' || s.stato === 'attesa') {
+        stato = 'errore';
+        messaggio = s.errore || (s.stato === 'scaduto'
+          ? 'Tempo scaduto: controlla il lettore.'
+          : 'Pagamento annullato.');
+        disegna();
+        return;
+      }
+
+      var mancano = Math.round((s.mancano || 0) / 1000);
+      messaggio = 'Sul lettore ci sono ' + euro(s.importo) +
+                  (mancano > 0 ? ' — ' + mancano + 's' : '');
+      if (s.errore) messaggio += ' (rete instabile)';
+      disegna();
+      timer = setTimeout(guarda, RITMO_MS);
+
+    }, function () {
+      // Il motore non risponde: NON si dichiara niente. Il cliente può
+      // aver già appoggiato la carta.
+      messaggio = 'Il motore non risponde — la cifra è ancora sul lettore';
+      disegna();
+      timer = setTimeout(guarda, RITMO_GUASTO_MS);
+    });
+  }
+
+  /**
+   * Ferma il lettore.
+   *
+   * @param poiRifai   dopo l'annullo manda subito la cifra nuova
+   * @param poiLascia  ad annullo riuscito lascia libero il metodo di
+   *                   pagamento, così si può scegliere Contanti al volo
+   *
+   * Se il lettore NON si ferma non si lascia niente e non si rifà niente:
+   * si diventa rossi e si manda a guardare il lettore. È la differenza fra
+   * un pagamento annullato e un cliente che paga due volte.
+   */
+  function annulla(poiRifai, poiLascia) {
+    ferma();
+    stato = 'chiedendo';
+    messaggio = 'Sto fermando il lettore...';
+    disegna();
+
+    motore('sumupAnnulla', []).then(function (s) {
+      altruiInCorso = false;
+
+      if (!s || !s.success) {
+        lettoreNonFermato = true;
+        stato = 'errore';
+        messaggio = (s && s.errore) || 'Non sono riuscito a fermare il lettore';
+        disegna();
+        return;
+      }
+
+      lettoreNonFermato = false;
+      if (poiRifai) { stato = 'fermo'; messaggio = ''; chiedi(); return; }
+
+      stato = 'fermo';
+      messaggio = '';
+      if (poiLascia && typeof togglePagamento === 'function' &&
+          metodoPagamentoSelezionato === 'SumUp') {
+        // Adesso sì: il lettore è fermo, il cliente pagherà in un altro
+        // modo, e si passa da togglePagamento così il resto del gestionale
+        // (il resto in contanti, il pulsante dinamico) si aggiorna da sé.
+        togglePagamento('SumUp');
+        return;
+      }
+      disegna();
+
+    }, function () {
+      lettoreNonFermato = true;
+      stato = 'errore';
+      messaggio = 'Non so se il lettore si è fermato: guardalo prima di incassare in un altro modo';
+      disegna();
+    });
+  }
+
+  /**
+   * Il totale è cambiato mentre la cifra era sul lettore.
+   * Si ferma il lettore e si chiede di ripremere: NON si rimanda da soli,
+   * per i 60 secondi in cui SumUp rifiuterebbe l'invio nuovo.
+   */
+  function totaleDiverso() {
+    ferma();
+    stato = 'chiedendo';
+    messaggio = 'Il totale è cambiato: fermo il lettore...';
+    disegna();
+
+    motore('sumupAnnulla', []).then(function (s) {
+      if (!s || !s.success) {
+        lettoreNonFermato = true;
+        stato = 'errore';
+        messaggio = (s && s.errore) || 'Non sono riuscito a fermare il lettore';
+        disegna();
+        return;
+      }
+      lettoreNonFermato = false;
+      stato = 'errore';
+      messaggio = 'Il totale è cambiato. Premi Riprova per mandare al lettore ' +
+                  euro(totaleAschermo()) + '.';
+      disegna();
+    }, function () {
+      lettoreNonFermato = true;
+      stato = 'errore';
+      messaggio = 'Non so se il lettore si è fermato: guardalo prima di riprovare';
+      disegna();
+    });
+  }
+
+  /** Che cosa deve avere il lettore, adesso. */
+  function valuta() {
+    if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+
+    if (metodoPagamentoSelezionato !== 'SumUp') return;
+    if (stato === 'pagato' || stato === 'chiedendo') return;
+
+    var totale = totaleAschermo();
+
+    if (!(totale > 0)) {
+      if (stato === 'lettore') annulla(false, false);
+      return;
+    }
+
+    // La cifra sul lettore è già quella giusta.
+    if (stato === 'lettore' && Math.abs(importo - totale) < 0.005) return;
+
+    timerTotale = setTimeout(function () {
+      timerTotale = null;
+      if (metodoPagamentoSelezionato !== 'SumUp') return;
+      if (stato === 'lettore') totaleDiverso();
+      else if (stato === 'fermo') chiedi();
+    }, ATTESA_TOTALE_MS);
+  }
+
+  /* ─── quello che chiama il resto del gestionale ─────────────────── */
+
+  function cambiaMetodo() {
+    if (metodoPagamentoSelezionato === 'SumUp') {
+      if (stato === 'errore' && !lettoreNonFermato) { stato = 'fermo'; messaggio = ''; }
+      disegna();
+      valuta();
+    } else {
+      if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+      if (stato === 'lettore') annulla(false, false);
+      else if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
+      disegna();
+    }
+  }
+
+  function totaleCambiato() { valuta(); }
+
+  /**
+   * Perché non si può registrare adesso.
+   *
+   * Due motivi, e il secondo è quello che conta: se il lettore non si è
+   * fermato, il cliente può ancora pagare. Registrare la vendita come
+   * Contanti in quel momento vuol dire incassarla due volte.
+   */
+  function motivoBlocco() {
+    if (metodoPagamentoSelezionato === 'SumUp' && stato === 'lettore') {
+      return 'Il cliente non ha ancora pagato ' + euro(importo) + ' sul lettore.\n\n' +
+             'Aspetta la conferma, oppure annulla.';
+    }
+    if (lettoreNonFermato) {
+      return 'Non so se il lettore si è fermato: il cliente potrebbe ancora pagare.\n\n' +
+             'Guarda il lettore prima di registrare, se no rischi di incassare due volte.';
+    }
+    return null;
+  }
+
+  function aRiposo() {
+    ferma();
+    if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+    var eraSulLettore = (stato === 'lettore');
+    var daLiberare = (stato === 'pagato' || eraSulLettore);
+    stato = 'fermo';
+    importo = 0;
+    messaggio = '';
+    riferimentoPagato = '';
+    lettoreNonFermato = false;
+    disegna();
+    if (!daLiberare) return;
+    motore(eraSulLettore ? 'sumupAnnulla' : 'sumupLibera', []).then(function () {}, function () {});
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var p = bottone();
+    if (p) {
+      p.addEventListener('click', function () {
+        if (stato === 'lettore') {
+          // NON si passa da togglePagamento come fa Satispay: lì il metodo
+          // si lascia subito, qui si lascia solo se il lettore si è fermato
+          // davvero. Ci pensa annulla().
+          annulla(false, true);
+        } else if (stato === 'errore') {
+          if (altruiInCorso) {
+            altruiInCorso = false;
+            annulla(true, false);
+          } else {
+            lettoreNonFermato = false;
+            stato = 'fermo'; messaggio = ''; disegna(); chiedi();
+          }
+        }
+      });
+    }
+    disegna();
+  });
+
+  window.sumup = {
     cambiaMetodo: cambiaMetodo,
     totaleCambiato: totaleCambiato,
     motivoBlocco: motivoBlocco,

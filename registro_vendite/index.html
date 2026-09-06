@@ -1789,6 +1789,14 @@ placeholder="Opzionale">
 <button type="button" class="satispay-btn hidden" id="btnSatispayChiedi"></button>
 <div class="satispay-riga" id="satispayStato"></div>
 </div>
+
+<!-- SumUp: l'importo va sul lettore Solo, che e' gia' girato verso il
+     cliente. Qui c'e' solo la riga di stato e il pulsante per fermarlo.
+     Riusa lo stile di Satispay: sono lo stesso oggetto con due nomi. -->
+<div id="sumupBlocco" class="hidden">
+<button type="button" class="satispay-btn hidden" id="btnSumUpChiedi"></button>
+<div class="satispay-riga" id="sumupStato"></div>
+</div>
 </div>
 
 <div class="form-group" id="sezioneContanti" style="display: none;">
@@ -1876,7 +1884,7 @@ placeholder="Banconota (€)">
 .accesso-riquadro h2 { margin: 0 0 10px; font-size: 20px; color: #333; }
 #accessoMessaggio { margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: #666; }
 /* ─── Satispay col QR sul secondo schermo ─── */
-#satispayBlocco { margin-top: 14px; }
+#satispayBlocco, #sumupBlocco { margin-top: 14px; }
 .satispay-btn {
   width: 100%;
   padding: 14px;
@@ -2068,7 +2076,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=7';
+      s.src = 'app.js?v=8';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
