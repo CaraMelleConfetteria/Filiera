@@ -262,6 +262,15 @@ border-color: #ff8c42;
 color: white;
 }
 
+/* Senza prodotti non c'e' niente da pagare, e i tre pulsanti si spengono.
+   Non e' solo grafica: toccarli non fa niente e compare una pillola rossa
+   che dice cosa manca. Scegliere un pagamento per un carrello vuoto e' un
+   gesto che non vuol dire nulla, e lasciarlo fare significa solo scoprire
+   piu' tardi che manca qualcos'altro. */
+#gruppoPagamento.spento .payment-button {
+opacity: .4;
+}
+
 /* Il pulsante Satispay dice da solo com'e' andata: verde se il cliente ha
    pagato, rosso se qualcosa non e' andato. E' il segnale piu' diretto che
    ci sia — la cassiera guarda gia' li', perche' e' il tasto che ha appena
@@ -1728,6 +1737,21 @@ style="flex: 1;">
 </details>
 </div>
 
+<div class="form-group">
+<label for="personalizzato">Importo Personalizzato (€)</label>
+<input type="text"
+inputmode="decimal"
+pattern="[0-9.]*"
+enterkeyhint="done"
+autocomplete="off"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false"
+id="personalizzato"
+class="form-control"
+placeholder="Opzionale">
+</div>
+
 <div class="form-group" id="gruppoPagamento">
 <label>Metodo di Pagamento</label>
 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
@@ -1750,21 +1774,6 @@ style="flex: 1;">
 <button type="button" class="satispay-btn hidden" id="btnSatispayChiedi"></button>
 <div class="satispay-riga" id="satispayStato"></div>
 </div>
-</div>
-
-<div class="form-group">
-<label for="personalizzato">Importo Personalizzato (€)</label>
-<input type="text"
-inputmode="decimal"
-pattern="[0-9.]*"
-enterkeyhint="done"
-autocomplete="off"
-autocorrect="off"
-autocapitalize="off"
-spellcheck="false"
-id="personalizzato"
-class="form-control"
-placeholder="Opzionale">
 </div>
 
 <div class="form-group" id="sezioneContanti" style="display: none;">

@@ -1421,6 +1421,7 @@ totaleElement.textContent = '€' + totaleFinale.toFixed(2).replace('.', ',');
 
 calcolaResto();
 aggiornaPulsanteDinamico();
+aggiornaPagamentoDisponibile();
 
 // Satispay: il totale e' cambiato, e il QR sullo schermo del cliente deve
 // inseguirlo. Aspetta un attimo prima di rifarlo — mentre si battono tre
@@ -1484,7 +1485,60 @@ whatsappCheckbox.checked = false;
 aggiornaPulsanteDinamico();
 }
 
+/**
+ * C'e' qualcosa nel carrello?
+ *
+ * La stessa domanda la facevano in tre punti diversi, ognuno con la sua
+ * copia del controllo: il pulsante dinamico, l'invio della vendita e ora
+ * anche i pulsanti di pagamento. Tre copie della stessa regola sono tre
+ * occasioni perche' una prenda una strada sua — e questa e' la regola che
+ * decide se una vendita esiste. Adesso e' scritta una volta.
+ */
+function ciSonoProdotti() {
+var trovato = false;
+
+document.querySelectorAll("[id^='conf_']").forEach(function(input) {
+if (input.type === "hidden" && (parseInt(input.value) || 0) > 0) trovato = true;
+});
+
+document.querySelectorAll("[id^='sfuso_']").forEach(function(input) {
+if (input.id.endsWith('_calc')) return;
+if (!input.classList || !input.classList.contains('sfuso-input')) return;
+var valore = parseFloat(input.value);
+if (!isNaN(valore) && valore > 0) trovato = true;
+});
+
+return trovato;
+}
+
+/**
+ * Accende o spegne i pulsanti di pagamento secondo il carrello.
+ *
+ * E se il carrello si svuota con un metodo gia' scelto, quel metodo si
+ * toglie: se no resterebbe selezionato un pagamento per una vendita che
+ * non esiste piu', e sarebbe l'unica cosa a schermo a dire il falso.
+ */
+function aggiornaPagamentoDisponibile() {
+var gruppo = document.getElementById("gruppoPagamento");
+if (!gruppo) return;
+
+var ok = ciSonoProdotti();
+if (ok) gruppo.classList.remove('spento');
+else gruppo.classList.add('spento');
+
+if (!ok && metodoPagamentoSelezionato && tipoVendita !== "Negozi") {
+togglePagamento(metodoPagamentoSelezionato);
+}
+}
+
 function togglePagamento(metodo) {
+// Senza prodotti non si sceglie un pagamento. Togliere quello gia' scelto
+// invece si puo' sempre: quella e' una correzione, non una scelta nuova.
+if (metodoPagamentoSelezionato !== metodo && !ciSonoProdotti()) {
+if (window.sistemaOffline) sistemaOffline.mostraNotifica('Seleziona i prodotti', 2500, 'error');
+return;
+}
+
 var btnId = 'btn' + metodo.replace(' ', '');
 var button = document.getElementById(btnId);
 
@@ -1559,22 +1613,8 @@ var telefono = document.getElementById("telefono").value.trim();
 var soloNumeri = telefono.replace(/[^0-9]/g, '');
 var telefonoValido = soloNumeri.length >= 9;
   
-var hasProdotti = false;
-  
-document.querySelectorAll("[id^='conf_']").forEach(function(input) {
-if (input.type === "hidden") {
-var qty = parseInt(input.value) || 0;
-if (qty > 0) hasProdotti = true;
-}
-});
-  
-document.querySelectorAll("[id^='sfuso_']").forEach(function(input) {
-if (input.id.endsWith('_calc')) return;
-if (!input.classList || !input.classList.contains('sfuso-input')) return;
-var valore = parseFloat(input.value);
-if (!isNaN(valore) && valore > 0) hasProdotti = true;
-});
-  
+var hasProdotti = ciSonoProdotti();
+
 if (telefonoValido && !hasProdotti) {
 submitBtn.textContent = "Invita su WhatsApp";
 submitBtn.classList.remove('error', 'success');
@@ -1622,22 +1662,8 @@ var telefono = document.getElementById("telefono").value.trim();
 var soloNumeri = telefono.replace(/[^0-9]/g, '');
 var telefonoValido = soloNumeri.length >= 9;
   
-var hasProdotti = false;
-  
-document.querySelectorAll("[id^='conf_']").forEach(function(input) {
-if (input.type === "hidden") {
-var qty = parseInt(input.value) || 0;
-if (qty > 0) hasProdotti = true;
-}
-});
-  
-document.querySelectorAll("[id^='sfuso_']").forEach(function(input) {
-if (input.id.endsWith('_calc')) return;
-if (!input.classList || !input.classList.contains('sfuso-input')) return;
-var valore = parseFloat(input.value);
-if (!isNaN(valore) && valore > 0) hasProdotti = true;
-});
-  
+var hasProdotti = ciSonoProdotti();
+
 if (telefonoValido && !hasProdotti) {
 invitaSoloWhatsApp();
 return;
