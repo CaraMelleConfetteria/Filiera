@@ -63,50 +63,56 @@ body {
 #attesa { background: transparent; }
 
 /* ─── il QR da inquadrare ───
-   Quando arriva il pagamento l'invito al gruppo sparisce e resta la
-   locandina di Satispay: quella e' un'immagine, disegnata a parte, con un
-   quadrato bianco vuoto in mezzo. Il QR vero si posa esattamente dentro
-   quel quadrato.
+   Costruita qui, non piu' un'immagine con un buco dentro.
 
-   Come ci si posa: l'immagine sta in un <img> normale — cosi' il browser
-   le tiene le proporzioni da solo, anche i Safari vecchi che non sanno
-   fare object-fit — e il riquadro del QR e' un figlio posizionato in
-   PERCENTUALE su di lei. Percentuale e non pixel: l'immagine si rimpicciolisce
-   con lo schermo e il QR la segue senza scollarsi, su qualunque tablet.
+   La differenza non e' estetica. Finche' era una locandina con un quadrato
+   bianco disegnato, il QR era grande quanto quel quadrato: il 17% della
+   larghezza dell'immagine, che su questo iPad faceva 24 millimetri. Il
+   cliente doveva avvicinare il telefono a un palmo.
+   Costruita a pezzi, il QR e' grande quanto decidiamo: 42vmin, cioe' piu'
+   di sei centimetri, e lo stesso in verticale e in orizzontale — vmin
+   guarda il lato corto dello schermo, che nelle due posizioni e' lo stesso.
 
-   Le quattro misure qui sotto sono state prese sull'immagine vera
-   (quadrato bianco di 230x230 su una locandina di 1300x1844). Se un giorno
-   si ridisegna la locandina spostando il quadrato, sono queste le righe da
-   rifare — e nient'altro. */
+   I puntini restano NERI su BIANCO. Un QR si legge per differenza di luce,
+   e i lettori si aspettano scuro su chiaro: bianco su rosso e' un negativo,
+   che molti telefoni non agganciano affatto. Il rosso ce l'ha attorno. */
+/* Le misure sono in vmin — il lato corto dello schermo — perche' cosi'
+   valgono uguali con l'iPad in piedi e coricato: il lato corto e' lo
+   stesso, e il QR viene grande uguale nelle due posizioni.
+   Sommate stanno dentro anche da coricato, dove lo spazio in altezza e'
+   tutto quello che c'e': 4 di margine + 18 di marchio + 4 + 3 + 42 di QR
+   + 3 + 3 + 6 di scritta + 4 = 87vmin su 133 di schermo. Se si tocca una
+   di queste misure, rifare quella somma — da coricato il margine e' poco. */
 #qr {
-  background: #EF5646;   /* lo stesso rosso della locandina: le fasce ai lati spariscono */
-  padding: 0;            /* la locandina arriva ai bordi: quello che avanza e' gia' rosso */
+  background: #EF5646;
+  padding: 4vmin;
 }
 
-/* Il riquadro che tiene insieme locandina e QR.
-   `flex: 0 0 auto` non e' un dettaglio: senza, i Safari vecchi lo
-   stringono piu' corto dell'immagine che contiene — la regola che glielo
-   impedisce (min-height automatica) e' arrivata dopo di loro. E siccome il
-   QR e' posizionato in percentuale SU QUESTO riquadro, un riquadro piu'
-   corto lo faceva finire troppo in alto e troppo piccolo, scoprendo il
-   quadrato bianco della locandina li' sotto. Due quadrati bianchi invece
-   di uno: e' successo davvero, su un iPad con iOS 9. */
-.foglio {
-  position: relative;
-  display: block;
-  flex: 0 0 auto;
-  line-height: 0;
+.marchio-caramelle {
+  width: 48vmin;
+  max-width: 86%;
+  height: auto;
 }
-.foglio img {
-  display: block;
-  max-width: 100vw;
-  max-height: 100vh;
+
+.riquadro {
+  margin: 4vmin 0 3vmin;
+  padding: 3vmin;
+  background: #fff;
+  border-radius: 4vmin;
+  line-height: 0;
 }
 
 #tela {
-  position: absolute;
+  display: block;
+  width: 42vmin;
+  height: 42vmin;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: pixelated;
+}
+
+.marchio-satispay {
+  width: 34vmin;
+  height: auto;
 }
 
 /* ─── pagato ─── */
@@ -165,10 +171,9 @@ body {
 <div class="schermata visibile" id="attesa"></div>
 
 <div class="schermata" id="qr">
-  <div class="foglio">
-    <img src="satispay.jpg" alt="">
-    <canvas id="tela"></canvas>
-  </div>
+  <img class="marchio-caramelle" src="logo-caramelle.png" alt="CaraMelle">
+  <div class="riquadro"><canvas id="tela"></canvas></div>
+  <img class="marchio-satispay" src="logo-satispay.png" alt="Satispay">
 </div>
 
 <div class="schermata" id="pagato">
@@ -582,28 +587,6 @@ var QR = (function () {
    monitor non c'è nessuno che possa accedere: al suo posto c'è il
    gettone nell'indirizzo, che il motore riconosce.
    ═══════════════════════════════════════════════════════════════════ */
-/* ═════ DOVE VA IL QR SULLA LOCANDINA ═══════════════════════════════
-   Misure prese sull'immagine vera: quadrato bianco di 229x229 pixel su una
-   locandina di 1300x1844, gia' convertita per lo schermo. Sono in percentuale, quindi valgono a qualunque
-   dimensione la locandina venga mostrata.
-   Si rifanno solo se si ridisegna la locandina spostando il quadrato.     */
-var QR_SINISTRA = 36.615;   // % dal bordo sinistro dell'immagine
-var QR_ALTO     = 52.932;   // % dal bordo alto
-var QR_LARGO    = 17.615;   // % della larghezza
-var QR_ALTEZZA  = 12.432;   // % dell'altezza
-
-/* Quanto il QR deborda dal quadrato bianco. 1 = lo riempie esatto, come
-   nel disegno. Alzandolo il codice diventa piu' grande e si porta dietro
-   il suo bordo bianco, quindi il quadrato sembra semplicemente piu' grande:
-   il disegno regge, e da lontano si legge meglio.
-
-   Serve perche' un QR non e' un ornamento: sotto una certa misura la
-   fotocamera non lo aggancia piu', e su uno schermo piccolo o tenuto di
-   traverso quel quadrato diventa davvero piccolo. Se al banco il cliente
-   deve avvicinarsi troppo, si alza questo numero — 1.4, 1.6 — e non si
-   tocca nient'altro. */
-var INGRANDIMENTO_QR = 1;
-
 /* Il colore dei puntini. Nero: il QR sta gia' dentro un quadrato bianco su
    una locandina rossa, quindi il rosso ce l'ha attorno. I puntini invece
    conviene tenerli il piu' scuri possibile — un lettore li distingue per
@@ -713,14 +696,6 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
         if (m[y][x]) c.fillRect((x + margine) * lato, (y + margine) * lato, lato, lato);
       }
     }
-    // Dove si posa: il quadrato bianco della locandina, allargato di
-    // INGRANDIMENTO_QR e ricentrato sullo stesso punto.
-    var f = Number(INGRANDIMENTO_QR) > 0 ? Number(INGRANDIMENTO_QR) : 1;
-    tela.style.left   = (QR_SINISTRA - QR_LARGO  * (f - 1) / 2) + '%';
-    tela.style.top    = (QR_ALTO     - QR_ALTEZZA * (f - 1) / 2) + '%';
-    tela.style.width  = (QR_LARGO   * f) + '%';
-    tela.style.height = (QR_ALTEZZA * f) + '%';
-
     codiceDisegnato = codice;
     return true;
   }
