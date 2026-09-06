@@ -17,6 +17,23 @@ html, body {
   user-select: none;
 }
 
+/* ═══ LO SFONDO FISSO ═══
+   L'invito al gruppo «Golosone!» sta a schermo tutto il giorno: e' quello
+   che il cliente guarda mentre aspetta, e vale piu' di un marchio fermo.
+   Il file si chiama sempre cosi' e sta accanto a questa pagina: per
+   cambiarlo si sostituisce l'immagine su GitHub, senza toccare il codice.
+
+   Si usa background-image e non un <img>: cosi' si puo' dire "stai dentro
+   lo schermo senza deformarti" anche sui Safari vecchi, che object-fit non
+   lo conoscono. Se il file mancasse resta il fondo chiaro e non si rompe
+   niente. */
+body {
+  background-image: url('attesa.gif');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+}
+
 /* Le tre schermate stanno tutte qui sopra, una sola visibile per volta.
    Non si ricostruisce niente al cambio di stato: si accende e si spegne.
    Un monitor che resta acceso dodici ore non deve avere niente che si
@@ -41,51 +58,38 @@ html, body {
 }
 .schermata.visibile { opacity: 1; visibility: visible; }
 
-/* ─── in attesa del prossimo cliente ─── */
-#attesa { background: #fafafa; }
-.marchio {
-  font-size: 7vmin;
-  font-weight: 700;
-  letter-spacing: -.02em;
-  color: #ff8c42;
-}
-.sottomarchio {
-  margin-top: 1.5vmin;
-  font-size: 2.6vmin;
-  letter-spacing: .28em;
-  text-transform: uppercase;
-  color: #999;
-}
+/* ─── in attesa del prossimo cliente ───
+   Non c'e' niente: si vede l'invito al gruppo, che e' lo sfondo. */
+#attesa { background: transparent; }
 
 /* ─── il QR da inquadrare ───
-   Solo il codice e una riga che dice che cosa farci. Niente importo: lo
-   mostra l'app di Satispay al cliente prima che confermi, ed e' quello che
-   conta — un numero scritto qui potrebbe solo essere vecchio di un istante
-   e contraddirlo. Niente conto alla rovescia: mette fretta a chi sta
-   cercando il telefono nella borsa, e chi guarda l'orologio e' la cassiera,
-   che il tempo ce l'ha gia' sul suo schermo.
-   Tolti quei due, il QR si prende tutto lo spazio: si inquadra da lontano
-   e senza chinarsi sul banco. */
+   Quando arriva il pagamento l'invito al gruppo sparisce: fondo bianco e
+   basta il codice. In quel momento il cliente ha una cosa sola da fare, e
+   tutto il resto e' rumore — anche una bella animazione. Il bianco pieno
+   serve anche al lettore, che ha bisogno di chiaro attorno al codice per
+   capire dove comincia.
+
+   DUE NUMERI DA TOCCARE, se serve:
+   - QUANTO E' GRANDE: la misura di #tela qui sotto. Se da lontano non si
+     legge, si alza. Sotto i 18vmin i puntini diventano troppo fini per la
+     fotocamera di un telefono.
+   - DI CHE COLORE: il rosso sta in cima al codice, si chiama COLORE_QR.
+     Un QR si legge per differenza di chiaro e scuro, non per colore: un
+     rosso troppo acceso si avvicina al bianco e diventa faticoso da
+     leggere. Questo e' scelto scuro apposta. */
 #qr { background: #ffffff; }
 .cornice {
-  padding: 3.5vmin;
-  background: #fff;
-  border: 3px solid #1a1a1a;
-  border-radius: 4vmin;
   line-height: 0;
 }
 #tela {
-  width: 62vmin;
-  height: 62vmin;
-  /* I puntini devono restare a spigolo vivo: sfumati si leggono peggio.
-     Safari non conosce "pixelated" e usa una parola sua, quindi si scrivono
-     tutte e due e ognuno prende quella che capisce. */
+  width: 22vmin;
+  height: 22vmin;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: pixelated;
 }
 .invito {
-  margin-top: 4vmin;
-  font-size: 3.4vmin;
+  margin-top: 3.5vmin;
+  font-size: 2.4vmin;
   color: #666;
 }
 
@@ -142,10 +146,7 @@ html, body {
 
 <div id="collegamento" class="acceso"></div>
 
-<div class="schermata visibile" id="attesa">
-  <div class="marchio">CaraMelle</div>
-  <div class="sottomarchio">Confetteria di Valle</div>
-</div>
+<div class="schermata visibile" id="attesa"></div>
 
 <div class="schermata" id="qr">
   <div class="cornice"><canvas id="tela"></canvas></div>
@@ -563,6 +564,12 @@ var QR = (function () {
    monitor non c'è nessuno che possa accedere: al suo posto c'è il
    gettone nell'indirizzo, che il motore riconosce.
    ═══════════════════════════════════════════════════════════════════ */
+/* Il rosso del QR. Scuro apposta: un lettore distingue i puntini per
+   differenza di luminosita', e un rosso acceso su bianco e' quasi chiaro
+   quanto il fondo. Questo resta rosso a vederlo e nero abbastanza da
+   leggersi. */
+var COLORE_QR = '#c8102e';
+
 var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0SgePOlTU38Fqxklujy2AYipeK1963F5KCV4oaUUQK-7e/exec';
 
 (function () {
@@ -599,6 +606,9 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
   var visibile        = 'attesa';
   var codiceDisegnato = '';
   var timerGrazie     = null;
+  // Il pagamento la cui spunta verde e' gia' stata mostrata e tolta. Serve
+  // a non rimetterla: vedi il commento piu' sotto.
+  var pagamentoChiuso = -1;
 
   function mostra(nome) {
     if (visibile === nome) return;
@@ -643,7 +653,7 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
     var c = tela.getContext('2d');
     c.fillStyle = '#ffffff';
     c.fillRect(0, 0, pixel, pixel);
-    c.fillStyle = '#000000';
+    c.fillStyle = COLORE_QR;
     for (var y = 0; y < n; y++) {
       for (var x = 0; x < n; x++) {
         if (m[y][x]) c.fillRect((x + margine) * lato, (y + margine) * lato, lato, lato);
@@ -734,14 +744,33 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
     }
 
     if (s.stato === 'pagato') {
+      // Questa spunta l'abbiamo gia' mostrata e gia' tolta: non si rimette.
+      //
+      // Serve perche' lo stato sul motore resta "pagato" finche' al banco
+      // non si registra la vendita, e senza questo controllo succedeva
+      // questo: spunta verde per mezzo minuto, ritorno al marchio, e alla
+      // domanda successiva — due secondi dopo — il motore diceva ancora
+      // "pagato" e la spunta tornava. Uno schermo che lampeggia fra il
+      // marchio e il verde davanti al cliente seguente.
+      //
+      // Il numero di revisione cambia a ogni pagamento nuovo, quindi il
+      // prossimo cliente la sua spunta la vede regolarmente.
+      if (s.revisione === pagamentoChiuso) {
+        mostra('attesa');
+        return;
+      }
+
       document.getElementById('pagatoImporto').textContent = euro(s.importo);
       mostra('pagato');
+
       // Se al banco si dimenticano di registrare la vendita, la spunta
       // verde non deve restare accesa per mezz'ora davanti al cliente
       // successivo: dopo mezzo minuto si torna da soli in attesa.
       if (!timerGrazie) {
+        var quale = s.revisione;
         timerGrazie = setTimeout(function () {
           timerGrazie = null;
+          pagamentoChiuso = quale;
           if (visibile === 'pagato') mostra('attesa');
         }, GRAZIE_MS);
       }

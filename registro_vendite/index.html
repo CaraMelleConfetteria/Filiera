@@ -262,6 +262,21 @@ border-color: #ff8c42;
 color: white;
 }
 
+/* Il pulsante Satispay dice da solo com'e' andata: verde se il cliente ha
+   pagato, rosso se qualcosa non e' andato. E' il segnale piu' diretto che
+   ci sia — la cassiera guarda gia' li', perche' e' il tasto che ha appena
+   premuto — e non c'e' niente da leggere per sapere se puo' andare avanti.
+   Il perche', quando serve, sta scritto sotto. */
+.payment-button.selected.pagato {
+background: #1e8e3e;
+border-color: #1e8e3e;
+}
+
+.payment-button.selected.guasto {
+background: #c62828;
+border-color: #c62828;
+}
+
 .payment-name {
 font-weight: 500;
 color: #1a1a1a;
@@ -2036,7 +2051,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=5';
+      s.src = 'app.js?v=6';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
