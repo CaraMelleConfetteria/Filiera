@@ -2993,6 +2993,11 @@ salvaReport();
   function bottone() { return document.getElementById('btnSatispayChiedi'); }
   function riga()    { return document.getElementById('satispayStato'); }
 
+  /* Vedi la gemella in fondo al file: se il tablet ha in cache l'index.html
+     di ieri, questo pezzo di pagina non c'è, e un QR mandato al cliente
+     bloccherebbe la vendita senza lasciare a schermo il modo di annullarla. */
+  function pronto() { return !!(blocco() && bottone() && riga()); }
+
   /* Il pulsante «Registra Vendita» vero, quello visibile: è lo stesso che
      cerca invia(), così non si finisce a spegnerne uno nascosto. */
   function pulsanteVendita() {
@@ -3161,6 +3166,7 @@ salvaReport();
   function chiedi() {
     var totale = totaleAschermo();
     if (!(totale > 0)) return;
+    if (!pronto()) return;
 
     stato = 'chiedendo';
     messaggio = 'Sto preparando il QR...';
@@ -3402,6 +3408,14 @@ salvaReport();
   function bottone() { return document.getElementById('btnSumUpChiedi'); }
   function riga()    { return document.getElementById('sumupStato'); }
 
+  /* C'è a schermo il posto per dire com'è andata e per annullare?
+     Se il tablet ha in cache l'index.html di ieri, questo pezzo di pagina
+     non esiste: mandare soldi al lettore in quel momento vorrebbe dire
+     bloccare la vendita senza dare a nessuno il modo di sbloccarla. Con la
+     coda davanti è il guasto peggiore. Meglio non partire affatto: SumUp
+     continua a funzionare come sempre, digitando sul lettore. */
+  function pronto() { return !!(blocco() && bottone() && riga()); }
+
   function pulsanteVendita() {
     var tutti = document.querySelectorAll('.submit-btn');
     for (var i = 0; i < tutti.length; i++) {
@@ -3429,10 +3443,19 @@ salvaReport();
     var b = blocco(), p = bottone(), r = riga();
     if (!b || !p || !r) return;
 
-    var attivo = (metodoPagamentoSelezionato === 'SumUp');
+    // Il blocco resta a schermo anche dopo aver lasciato SumUp, se non si sa
+    // se il lettore si è fermato: è l'unico posto da cui si può sbloccare la
+    // vendita, e nasconderlo lascerebbe la cassiera davanti a un rifiuto
+    // senza via d'uscita.
+    var attivo = (metodoPagamentoSelezionato === 'SumUp') || lettoreNonFermato;
     b.classList.toggle('hidden', !attivo);
 
-    if (stato === 'lettore') {
+    if (lettoreNonFermato) {
+      p.textContent = 'Ho controllato: non ha incassato';
+      p.className = 'satispay-btn annulla';
+      p.disabled = false;
+      p.classList.remove('hidden');
+    } else if (stato === 'lettore') {
       p.textContent = 'Annulla sul lettore';
       p.className = 'satispay-btn annulla';
       p.disabled = false;
@@ -3460,7 +3483,7 @@ salvaReport();
     // capricci: lì il cliente può ancora pagare da un momento all'altro.
     var tasto = document.getElementById('btnSumUp');
     if (tasto) {
-      var suDiLui = (metodoPagamentoSelezionato === 'SumUp');
+      var suDiLui = (metodoPagamentoSelezionato === 'SumUp') || lettoreNonFermato;
       if (suDiLui && stato === 'pagato') {
         tasto.classList.add('pagato');
         tasto.classList.remove('guasto');
@@ -3501,6 +3524,7 @@ salvaReport();
   function chiedi() {
     var totale = totaleAschermo();
     if (!(totale > 0)) return;
+    if (!pronto()) return;
 
     ferma();
     stato = 'chiedendo';
@@ -3700,7 +3724,11 @@ salvaReport();
     } else {
       if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
       if (stato === 'lettore') annulla(false, false);
-      else if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
+      // Un errore qualunque si dimentica lasciando SumUp; il dubbio sul
+      // lettore no — quello lo si toglie solo guardandolo.
+      else if ((stato === 'errore' && !lettoreNonFermato) || stato === 'pagato') {
+        stato = 'fermo'; messaggio = '';
+      }
       disegna();
     }
   }
@@ -3745,7 +3773,20 @@ salvaReport();
     var p = bottone();
     if (p) {
       p.addEventListener('click', function () {
-        if (stato === 'lettore') {
+        if (lettoreNonFermato) {
+          // Presa d'atto, non azione: la cassiera ha guardato il lettore e
+          // dice che non ha incassato. Non si telefona a nessuno — chiedere
+          // di nuovo a SumUp non aggiungerebbe niente a quello che ha visto
+          // lei con i suoi occhi, e riprovare l'annullo su un lettore che
+          // intanto ha incassato non farebbe che confondere le acque.
+          lettoreNonFermato = false;
+          stato = 'fermo';
+          messaggio = '';
+          disegna();
+          // Se SumUp è ancora il metodo scelto adesso si può rimandare:
+          // ha appena confermato che il lettore è libero.
+          if (metodoPagamentoSelezionato === 'SumUp') valuta();
+        } else if (stato === 'lettore') {
           // NON si passa da togglePagamento come fa Satispay: lì il metodo
           // si lascia subito, qui si lascia solo se il lettore si è fermato
           // davvero. Ci pensa annulla().
