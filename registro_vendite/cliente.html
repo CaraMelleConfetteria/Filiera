@@ -111,9 +111,19 @@ html, body {
 .guasto-titolo { font-size: 4vmin; font-weight: 600; }
 .guasto-nota { margin-top: 2vmin; font-size: 2.4vmin; color: #999; max-width: 70vmin; text-align: center; line-height: 1.6; }
 
-/* Pallino di collegamento: si accende solo quando il motore non risponde.
-   Piccolo e in un angolo — deve dire "guarda che c'è un problema" a chi
-   sta dietro il banco, non spaventare il cliente davanti. */
+/* Pallino di collegamento. Nasce ACCESO e si spegne al primo scambio
+   riuscito col motore, non il contrario.
+
+   Il motivo l'abbiamo imparato a spese nostre: la schermata di partenza è
+   il marchio, la stessa che si vede quando tutto va bene e non c'è nessun
+   pagamento in corso. Una pagina che non riusciva nemmeno a telefonare
+   restava lì, identica, e sembrava a posto — mentre al banco il QR era
+   stato creato da venti minuti. Un guasto che assomiglia al buon
+   funzionamento è il peggiore di tutti.
+
+   Ora, finché quel pallino è rosso, quella pagina non ha ancora parlato
+   con nessuno. Piccolo e in un angolo: deve dirlo a chi sta dietro il
+   banco, non spaventare il cliente davanti. */
 #collegamento {
   position: absolute;
   top: 1.6vmin;
@@ -130,7 +140,7 @@ html, body {
 </head>
 <body>
 
-<div id="collegamento"></div>
+<div id="collegamento" class="acceso"></div>
 
 <div class="schermata visibile" id="attesa">
   <div class="marchio">CaraMelle</div>
@@ -709,6 +719,8 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
 
   function giro() {
     chiedi(function (d) {
+      // Primo scambio riuscito: da qui in poi il pallino resta spento
+      // finché il motore risponde.
       pallino.classList.remove('acceso');
       // Se la risposta e' malformata si accende il pallino e si riprova:
       // l'importante e' che il giro non si fermi MAI. Uno schermo che smette
