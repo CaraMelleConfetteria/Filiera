@@ -1294,6 +1294,10 @@ aggiornaTotali();
 }
 
 function aggiornaTotali() {
+// Prima di ogni conto: un importo personalizzato senza prodotti non deve
+// sopravvivere al carrello per cui era stato scritto.
+svuotaImportoSeCarrelloVuoto();
+
 var totaleCalcolato = 0;
 var perAliquota = {};                      // stesso conteggio che fa il server
 function sommaAliq(nome, importo) {
@@ -1518,13 +1522,54 @@ return trovato;
  * toglie: se no resterebbe selezionato un pagamento per una vendita che
  * non esiste piu', e sarebbe l'unica cosa a schermo a dire il falso.
  */
-function aggiornaPagamentoDisponibile() {
-var gruppo = document.getElementById("gruppoPagamento");
-if (!gruppo) return;
+/** La pillola rossa che dice cosa manca. Una sola frase, un solo posto. */
+function avvisaProdottiMancanti() {
+if (window.sistemaOffline) sistemaOffline.mostraNotifica('Seleziona i prodotti', 2500, 'error');
+}
 
+/**
+ * Il carrello si e' svuotato con un importo personalizzato gia' scritto:
+ * quell'importo si cancella.
+ *
+ * Un importo senza prodotti non e' un dato incompleto, e' un dato falso:
+ * resterebbe a schermo come totale di una vendita che non esiste, e al
+ * primo prodotto battuto lo scavalcherebbe senza che nessuno se ne accorga.
+ * Sta in cima ad aggiornaTotali perche' il conto va rifatto DOPO averlo
+ * tolto, non prima.
+ */
+function svuotaImportoSeCarrelloVuoto() {
+var campo = document.getElementById("personalizzato");
+if (!campo || campo.value === '') return;
+if (ciSonoProdotti()) return;
+campo.value = '';
+avvisaProdottiMancanti();
+}
+
+/**
+ * Accende o spegne quello che non ha senso senza prodotti: i tre pulsanti
+ * del pagamento e il campo dell'importo personalizzato.
+ *
+ * E se il carrello si svuota con un metodo gia' scelto, quel metodo si
+ * toglie: se no resterebbe selezionato un pagamento per una vendita che
+ * non esiste piu', e sarebbe l'unica cosa a schermo a dire il falso.
+ */
+function aggiornaPagamentoDisponibile() {
 var ok = ciSonoProdotti();
+
+var gruppo = document.getElementById("gruppoPagamento");
+if (gruppo) {
 if (ok) gruppo.classList.remove('spento');
 else gruppo.classList.add('spento');
+}
+
+// Il campo resta toccabile apposta: cosi' si puo' rispondere con la
+// pillola invece di lasciare un campo morto che non dice perche'.
+var campo = document.getElementById("personalizzato");
+if (campo) {
+campo.readOnly = !ok;
+if (ok) campo.classList.remove('spento');
+else campo.classList.add('spento');
+}
 
 if (!ok && metodoPagamentoSelezionato && tipoVendita !== "Negozi") {
 togglePagamento(metodoPagamentoSelezionato);
@@ -1535,7 +1580,7 @@ function togglePagamento(metodo) {
 // Senza prodotti non si sceglie un pagamento. Togliere quello gia' scelto
 // invece si puo' sempre: quella e' una correzione, non una scelta nuova.
 if (metodoPagamentoSelezionato !== metodo && !ciSonoProdotti()) {
-if (window.sistemaOffline) sistemaOffline.mostraNotifica('Seleziona i prodotti', 2500, 'error');
+avvisaProdottiMancanti();
 return;
 }
 
@@ -1942,6 +1987,10 @@ validaNumeroBanconota(this);
 
 var personalizzatoInput = document.getElementById('personalizzato');
 if (personalizzatoInput) {
+// Toccato mentre e' spento: si dice cosa manca invece di non rispondere.
+personalizzatoInput.addEventListener('focus', function() {
+if (this.readOnly) { this.blur(); avvisaProdottiMancanti(); }
+});
 personalizzatoInput.addEventListener('input', function() {
 validaNumeroPersonalizzato(this);
 });

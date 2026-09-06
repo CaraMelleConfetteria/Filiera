@@ -271,6 +271,14 @@ color: white;
 opacity: .4;
 }
 
+/* Anche l'importo personalizzato si spegne: un importo senza prodotti non
+   vuol dire niente, e scriverlo lo si scoprirebbe solo dopo. Toccandolo
+   compare la stessa pillola dei pulsanti, cosi' si capisce cosa manca
+   invece di trovare un campo che non risponde. */
+#personalizzato.spento {
+opacity: .4;
+}
+
 /* Il pulsante Satispay dice da solo com'e' andata: verde se il cliente ha
    pagato, rosso se qualcosa non e' andato. E' il segnale piu' diretto che
    ci sia — la cassiera guarda gia' li', perche' e' il tasto che ha appena
@@ -1752,6 +1760,13 @@ class="form-control"
 placeholder="Opzionale">
 </div>
 
+<div class="totals-section">
+<h3>Totale</h3>
+<div id="totaleCalcolato" class="total-calculated hidden"></div>
+<div id="totaleCustomLabel" class="total-custom-label hidden">Importo Personalizzato</div>
+<div id="totale" class="total-amount">€0,00</div>
+</div>
+
 <div class="form-group" id="gruppoPagamento">
 <label>Metodo di Pagamento</label>
 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
@@ -1792,13 +1807,6 @@ class="form-control"
 placeholder="Banconota (€)">
 <div id="resto" class="resto-display">Resto: €0,00</div>
 </div>
-</div>
-
-<div class="totals-section">
-<h3>Totale</h3>
-<div id="totaleCalcolato" class="total-calculated hidden"></div>
-<div id="totaleCustomLabel" class="total-custom-label hidden">Importo Personalizzato</div>
-<div id="totale" class="total-amount">€0,00</div>
 </div>
 
 <div class="submit-section">
