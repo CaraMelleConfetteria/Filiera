@@ -23,7 +23,13 @@ html, body {
    accumula. */
 .schermata {
   position: absolute;
-  inset: 0;
+  /* Non "inset: 0": Safari lo capisce solo dalla 14.1, e su un iPad piu'
+     vecchio le schermate resterebbero senza dimensioni — pagina accartocciata
+     e nessun QR. Le quattro proprieta' separate le capiscono tutti. */
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -68,7 +74,15 @@ html, body {
   border-radius: 4vmin;
   line-height: 0;
 }
-#tela { width: 62vmin; height: 62vmin; image-rendering: pixelated; }
+#tela {
+  width: 62vmin;
+  height: 62vmin;
+  /* I puntini devono restare a spigolo vivo: sfumati si leggono peggio.
+     Safari non conosce "pixelated" e usa una parola sua, quindi si scrivono
+     tutte e due e ognuno prende quella che capisce. */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: pixelated;
+}
 .invito {
   margin-top: 4vmin;
   font-size: 3.4vmin;
@@ -309,8 +323,12 @@ var QR = (function () {
     var taglia = ver * 4 + 17;
     var m = [], fisso = [];
     for (var y = 0; y < taglia; y++) {
-      m.push(new Array(taglia).fill(false));
-      fisso.push(new Array(taglia).fill(false));
+      // Riempite a mano invece che con .fill(): su un Safari molto vecchio
+      // quel metodo puo' non esserci, e qui non si vuole dipendere da niente.
+      var rigaM = [], rigaF = [];
+      for (var x0 = 0; x0 < taglia; x0++) { rigaM.push(false); rigaF.push(false); }
+      m.push(rigaM);
+      fisso.push(rigaF);
     }
 
     function metti(x, y, scuro) {
@@ -544,8 +562,20 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
   var ATTESA_GUASTO  = 5000;    // se il motore non risponde, si rallenta
   var GRAZIE_MS      = 30000;   // quanto resta la spunta verde se al banco si distraggono
 
+  // Il gettone dall'indirizzo, letto a mano: URLSearchParams esiste solo
+  // dai Safari recenti, e per prendere un valore solo non vale la pena
+  // dipendere da qualcosa che su un iPad vecchio potrebbe non esserci.
   var gettone = '';
-  try { gettone = new URLSearchParams(location.search).get('t') || ''; } catch (e) {}
+  try {
+    var pezzi = String(location.search || '').replace(/^\?/, '').split('&');
+    for (var i = 0; i < pezzi.length; i++) {
+      var eq = pezzi[i].indexOf('=');
+      if (eq > 0 && pezzi[i].slice(0, eq) === 't') {
+        gettone = decodeURIComponent(pezzi[i].slice(eq + 1));
+        break;
+      }
+    }
+  } catch (e) {}
 
   var schermate = {
     attesa: document.getElementById('attesa'),
@@ -618,14 +648,28 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
      la stessa accortezza del gestionale. Qualunque cosa fuori dallo
      standard più stretto farebbe partire al browser una domanda
      preliminare a cui Apps Script non risponde.                       */
-  function chiedi() {
-    return fetch(MOTORE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ azione: 'satispaySchermo', token: gettone })
-    }).then(function (r) { return r.text(); }).then(function (t) {
-      return JSON.parse(t);
-    });
+  function chiedi(quandoRisponde, quandoFallisce) {
+    var x = new XMLHttpRequest();
+    x.open('POST', MOTORE, true);
+    x.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      if (x.status < 200 || x.status >= 300) { quandoFallisce(); return; }
+      var dati;
+      try { dati = JSON.parse(x.responseText); }
+      catch (e) { quandoFallisce(); return; }
+      quandoRisponde(dati);
+    };
+    x.onerror = function () { quandoFallisce(); };
+    x.ontimeout = function () { quandoFallisce(); };
+    x.timeout = 15000;
+
+    try {
+      x.send(JSON.stringify({ azione: 'satispaySchermo', token: gettone }));
+    } catch (e) {
+      quandoFallisce();
+    }
   }
 
   function applica(d) {
@@ -664,14 +708,19 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
   }
 
   function giro() {
-    chiedi().then(function (d) {
+    chiedi(function (d) {
       pallino.classList.remove('acceso');
-      applica(d);
+      // Se la risposta e' malformata si accende il pallino e si riprova:
+      // l'importante e' che il giro non si fermi MAI. Uno schermo che smette
+      // di chiedere resta bello e muto, ed e' il guasto peggiore perche' non
+      // sembra un guasto.
+      try { applica(d); }
+      catch (e) { pallino.classList.add('acceso'); }
       setTimeout(giro, ATTESA_NORMALE);
     }, function () {
-      // Il motore non risponde. NON si cambia quello che c'è a schermo:
-      // se il cliente sta inquadrando un QR valido, toglierglielo perché
-      // è caduta la linea per due secondi sarebbe il danno peggiore.
+      // Il motore non risponde. NON si cambia quello che c'e' a schermo:
+      // se il cliente sta inquadrando un QR valido, toglierglielo perche'
+      // e' caduta la linea per due secondi sarebbe il danno peggiore.
       pallino.classList.add('acceso');
       setTimeout(giro, ATTESA_GUASTO);
     });
