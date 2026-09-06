@@ -608,6 +608,19 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
   var ATTESA_GUASTO  = 5000;    // se il motore non risponde, si rallenta
   var GRAZIE_MS      = 30000;   // quanto resta la spunta verde se al banco si distraggono
 
+  /* Ogni tanto la pagina si ricarica da sola.
+     Non e' un vezzo: questo schermo resta acceso otto ore su un apparecchio
+     con poca memoria, e una pagina che gira per ore accumula — l'animazione
+     di sfondo, gli script delle domande al motore, quello che il browser
+     tiene da parte. Safari, quando la memoria finisce, uccide la scheda e
+     la ricarica per conto suo, con la scritta «si e' verificato un
+     problema» ben visibile davanti al cliente.
+     Meglio farlo noi, prima di lui, e SOLO da fermi: mai mentre c'e' un QR
+     a schermo o la spunta di un pagamento appena ricevuto. Cosi' non si
+     vede e non capita mai nel momento sbagliato. */
+  var RICARICA_DOPO_MS = 20 * 60 * 1000;
+  var accesaDa = new Date().getTime();
+
   // Il gettone dall'indirizzo, letto a mano: URLSearchParams esiste solo
   // dai Safari recenti, e per prendere un valore solo non vale la pena
   // dipendere da qualcosa che su un iPad vecchio potrebbe non esserci.
@@ -726,10 +739,17 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
     var chiuso = false;
     var scadenza = null;
 
+    /* Si smonta tutto, non solo si toglie di mezzo il tag: una domanda ogni
+       due secondi per otto ore fa quattordicimila script, e quello che
+       resta attaccato a ognuno non lo si riprende piu'. Su un apparecchio
+       con poca memoria e' la differenza fra arrivare a sera e no. */
     function chiudi() {
       if (scadenza) { clearTimeout(scadenza); scadenza = null; }
       try { window[nome] = undefined; } catch (e) {}
       try { delete window[nome]; } catch (e) {}
+      tag.onerror = null;
+      tag.onload = null;
+      try { tag.src = ''; } catch (e) {}
       if (tag.parentNode) tag.parentNode.removeChild(tag);
     }
 
@@ -818,6 +838,11 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
     if (timerGrazie) { clearTimeout(timerGrazie); timerGrazie = null; }
     codiceDisegnato = '';
     mostra('attesa');
+
+    // Siamo fermi: e' il momento buono per rinfrescare la memoria.
+    if (new Date().getTime() - accesaDa > RICARICA_DOPO_MS) {
+      location.reload();
+    }
   }
 
   function giro() {
