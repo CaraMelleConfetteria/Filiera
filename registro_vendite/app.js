@@ -1815,6 +1815,11 @@ totaleMostrato: totaleMostrato,
 confezionati: confezionati,
 sfuso: sfuso,
 metodoPagamento: metodoPagamentoSelezionato,
+// La prova che l'incasso Satispay e' arrivato davvero. Vuota se la vendita
+// e' stata registrata senza che il motore abbia visto la conferma — cosa
+// che resta permessa apposta, perche' un guasto non deve fermare la fila,
+// ma che da qui in avanti si vede nel registro invece di sparire.
+rifSatispay: (window.satispay ? window.satispay.riferimento() : ''),
 // Bandierina FISCALITÀ: false solo se l'operatrice l'ha messa sul rosso.
 // Il server controlla `!== false`, quindi se questo campo non arrivasse
 // affatto — vendita rimasta in coda da prima, client vecchio — i documenti
@@ -2958,6 +2963,15 @@ salvaReport();
   var stato = 'fermo';
   var importo = 0;
   var messaggio = '';
+  // Il motore dice che c'e' gia' un pagamento vivo, ma questo tablet non e'
+  // quello che l'ha creato — pagina ricaricata, o un altro dispositivo.
+  // Senza questo il pulsante offriva "Riprova", che riprovava e si
+  // ribeccava lo stesso rifiuto: un vicolo cieco finche' il QR non scadeva.
+  var altruiInCorso = false;
+  // L'identificativo del pagamento che il MOTORE ha visto accettato. E' la
+  // sola prova che quei soldi sono arrivati davvero: senza, nel registro
+  // resta scritto "Satispay" e nessuno puo' piu' controllare se e' vero.
+  var riferimentoPagato = '';
   var timer = null;             // il giro di domande al motore
   var timerTotale = null;       // l'attesa che il carrello si fermi
 
@@ -3009,8 +3023,8 @@ salvaReport();
       p.disabled = false;
       p.classList.remove('hidden');
     } else if (stato === 'errore') {
-      p.textContent = 'Riprova';
-      p.className = 'satispay-btn';
+      p.textContent = altruiInCorso ? 'Annulla il pagamento in corso' : 'Riprova';
+      p.className = 'satispay-btn' + (altruiInCorso ? ' annulla' : '');
       p.disabled = false;
       p.classList.remove('hidden');
     } else if (stato === 'chiedendo') {
@@ -3102,6 +3116,7 @@ salvaReport();
       if (s.stato === 'pagato') {
         stato = 'pagato';
         importo = s.importo;
+        riferimentoPagato = s.id || '';
         // Nessuna frase: lo dice il pulsante Satispay diventando verde.
         // Una riga di testo in piu' e' una cosa da leggere proprio nel
         // momento in cui si ha il cliente davanti e le mani occupate.
@@ -3149,10 +3164,13 @@ salvaReport();
     motore('satispayAvvia', [totale, cliente.trim()]).then(function (s) {
       if (!s || !s.success) {
         stato = 'errore';
+        altruiInCorso = !!(s && s.inCorso);
         messaggio = (s && s.errore) || 'Satispay non ha accettato la richiesta';
         disegna();
         return;
       }
+      altruiInCorso = false;
+      riferimentoPagato = '';
       stato = 'attesa';
       importo = s.importo;
       messaggio = 'QR sullo schermo del cliente — ' + euro(s.importo);
@@ -3176,6 +3194,7 @@ salvaReport();
     disegna();
 
     motore('satispayAnnulla', []).then(function (s) {
+      altruiInCorso = false;
       if (poiRifai) { stato = 'fermo'; messaggio = ''; chiedi(); return; }
       stato = (s && s.success) ? 'fermo' : 'errore';
       messaggio = (s && s.success) ? '' : ((s && s.errore) || 'Annullamento non riuscito');
@@ -3265,6 +3284,7 @@ salvaReport();
     stato = 'fermo';
     importo = 0;
     messaggio = '';
+    riferimentoPagato = '';
     disegna();
     if (!daLiberare) return;
     // Un QR ancora vivo si annulla; un pagamento già incassato si libera
@@ -3293,7 +3313,14 @@ salvaReport();
             annulla(false);
           }
         } else if (stato === 'errore') {
-          stato = 'fermo'; messaggio = ''; disegna(); chiedi();
+          if (altruiInCorso) {
+            // Non c'e' niente da riprovare: c'e' da spegnere quello che
+            // qualcun altro ha lasciato acceso, e poi chiedere il nostro.
+            altruiInCorso = false;
+            annulla(true);
+          } else {
+            stato = 'fermo'; messaggio = ''; disegna(); chiedi();
+          }
         }
       });
     }
@@ -3304,6 +3331,7 @@ salvaReport();
     cambiaMetodo: cambiaMetodo,
     totaleCambiato: totaleCambiato,
     motivoBlocco: motivoBlocco,
+    riferimento: function () { return (stato === 'pagato') ? riferimentoPagato : ''; },
     aRiposo: aRiposo,
     stato: function () { return stato; }
   };

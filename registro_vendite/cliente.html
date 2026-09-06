@@ -594,13 +594,47 @@ var QR = (function () {
    fotocamera. */
 var COLORE_QR = '#000000';
 
+/* L'indirizzo del motore.
+   Se si chiude questo schermo a un solo account Google (proprieta'
+   SATISPAY_EMAIL_SCHERMO), qui va l'indirizzo di una distribuzione a parte,
+   quella con «Esegui come: utente che accede» — perche' solo cosi' Google
+   ci dice CHI sta guardando. Il tablet del banco resta sulla sua, che non
+   chiede nessun accesso: se si sbaglia qui, si ferma lo schermo del
+   cliente e non l'incasso. */
 var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0SgePOlTU38Fqxklujy2AYipeK1963F5KCV4oaUUQK-7e/exec';
 
 (function () {
   'use strict';
 
   var ATTESA_NORMALE = 2000;    // ogni quanto si chiede al motore
+  var ATTESA_RIPOSO  = 5000;    // quando da un po' non succede niente
   var ATTESA_GUASTO  = 5000;    // se il motore non risponde, si rallenta
+
+  /* Perche' due ritmi.
+     Questo schermo chiede al motore anche quando al banco non sta
+     succedendo niente, e in otto ore di mercato sono decine di megabyte
+     sulla saponetta — piu' il logorio, che su un iPad vecchio conta di
+     piu': ogni domanda costruisce e smonta un elemento nella pagina, ed e'
+     quel ritmo che a lungo andare stanca Safari.
+     Rallentare sempre pero' vorrebbe dire far aspettare il cliente fino a
+     cinque secondi prima di vedere il QR, e cinque secondi con la coda
+     dietro sono lunghi. Quindi: pieno ritmo mentre si lavora e per un
+     minuto buono dopo, poi si rallenta da soli. Al mercato non si rallenta
+     mai davvero; la notte e nelle ore vuote sempre.                    */
+  var CODA_VELOCE_MS = 60 * 1000;
+  var ultimoMovimento = new Date().getTime();
+
+  /* Quante domande di fila devono cadere nel vuoto prima di scriverlo a
+     schermo. Una o due cadono di continuo — la saponetta, il tunnel, il
+     motore che ci mette un attimo — e non vuol dire niente. Sei di fila
+     con questo ritmo sono una ventina di secondi: li' e' rotto davvero, e
+     sapere che e' rotto vale piu' di una schermata pulita che mente.
+     La causa piu' probabile, se lo schermo e' riservato a un account, e'
+     proprio quella: l'iPad e' uscito da Google e la domanda non arriva
+     nemmeno al nostro codice, quindi non c'e' nessun errore da leggere —
+     solo silenzio. Per questo il consiglio e' scritto qui e non li'. */
+  var GUASTI_PRIMA_DI_DIRLO = 6;
+  var fallimentiDiFila = 0;
   var GRAZIE_MS      = 30000;   // quanto resta la spunta verde se al banco si distraggono
 
   /* Ogni tanto la pagina si ricarica da sola.
@@ -778,6 +812,11 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
     var s = d.risultato;
     if (!s.success) { guasto('Schermo non riconosciuto', s.errore || ''); return; }
 
+    // C'e' qualcosa a schermo: si sta lavorando, e il minuto di grazia
+    // riparte da adesso. Il rallentamento arriva solo dopo un minuto pieno
+    // di niente.
+    if (s.stato === 'qr' || s.stato === 'pagato') ultimoMovimento = new Date().getTime();
+
     if (s.stato === 'qr' && s.codice) {
       if (timerGrazie) { clearTimeout(timerGrazie); timerGrazie = null; }
       // Se il codice non si riesce a disegnare la schermata di guasto è già
@@ -832,6 +871,11 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
     }
   }
 
+  /* Fermi da abbastanza tempo da poter rallentare? */
+  function ritmo() {
+    return (new Date().getTime() - ultimoMovimento > CODA_VELOCE_MS)
+      ? ATTESA_RIPOSO : ATTESA_NORMALE;
+  }
   function giro() {
     chiedi(function (d) {
       // Primo scambio riuscito: da qui in poi il pallino resta spento
@@ -841,14 +885,23 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
       // l'importante e' che il giro non si fermi MAI. Uno schermo che smette
       // di chiedere resta bello e muto, ed e' il guasto peggiore perche' non
       // sembra un guasto.
+      fallimentiDiFila = 0;
       try { applica(d); }
       catch (e) { pallino.classList.add('acceso'); }
-      setTimeout(giro, ATTESA_NORMALE);
+      setTimeout(giro, ritmo());
     }, function () {
       // Il motore non risponde. NON si cambia quello che c'e' a schermo:
       // se il cliente sta inquadrando un QR valido, toglierglielo perche'
       // e' caduta la linea per due secondi sarebbe il danno peggiore.
       pallino.classList.add('acceso');
+      fallimentiDiFila++;
+      // Solo sulla schermata d'attesa, dove non si copre niente di utile.
+      if (fallimentiDiFila >= GUASTI_PRIMA_DI_DIRLO && visibile === 'attesa') {
+        guasto('Schermo scollegato',
+               'Non riesco a parlare col gestionale. Controlla la rete e, se ' +
+               'questo apparecchio e\' uscito da Google, rientra con l\'account ' +
+               'di CaraMelle: poi ricarica la pagina.');
+      }
       setTimeout(giro, ATTESA_GUASTO);
     });
   }
