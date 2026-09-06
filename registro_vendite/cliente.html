@@ -654,32 +654,69 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
   }
 
   /* ─── la domanda al motore ─────────────────────────────────────────
-     Corpo dichiarato come testo semplice e gettone dentro al corpo: è
-     la stessa accortezza del gestionale. Qualunque cosa fuori dallo
-     standard più stretto farebbe partire al browser una domanda
-     preliminare a cui Apps Script non risponde.                       */
-  function chiedi(quandoRisponde, quandoFallisce) {
-    var x = new XMLHttpRequest();
-    x.open('POST', MOTORE, true);
-    x.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+     Non si telefona: ci si fa mandare la risposta come se fosse uno script
+     da eseguire. Sembra un giro strano, ed e' il piu' robusto che ci sia.
 
-    x.onreadystatechange = function () {
-      if (x.readyState !== 4) return;
-      if (x.status < 200 || x.status >= 300) { quandoFallisce(); return; }
-      var dati;
-      try { dati = JSON.parse(x.responseText); }
-      catch (e) { quandoFallisce(); return; }
+     Il motivo e' l'apparecchio che sta dall'altra parte. Apps Script
+     risponde a ogni chiamata con un rimbalzo verso un altro indirizzo di
+     Google, e i browser di dieci anni fa si rifiutano di seguirlo quando la
+     richiesta parte da un sito diverso: la chiamata non parte proprio, e la
+     pagina resta ferma senza dire niente. Su un iPad con iOS 9 — che e'
+     esattamente il tipo di apparecchio che si mette a fare da secondo
+     schermo, perche' tanto deve fare una cosa sola — succede questo.
+
+     Uno script caricato in questo modo i rimbalzi li segue senza discutere,
+     non ha nessun controllo di origine da soddisfare, e funziona su
+     qualunque browser dal 2009 in poi. Cosi' la pagina non ha un modo per
+     gli apparecchi nuovi e uno per quelli vecchi: ne ha uno solo, e regge
+     dappertutto.                                                          */
+  var quanteDomande = 0;
+
+  function chiedi(quandoRisponde, quandoFallisce) {
+    quanteDomande++;
+    var nome = '__schermoCaraMelle' + quanteDomande;
+    var tag = document.createElement('script');
+    var chiuso = false;
+    var scadenza = null;
+
+    function chiudi() {
+      if (scadenza) { clearTimeout(scadenza); scadenza = null; }
+      try { window[nome] = undefined; } catch (e) {}
+      try { delete window[nome]; } catch (e) {}
+      if (tag.parentNode) tag.parentNode.removeChild(tag);
+    }
+
+    window[nome] = function (dati) {
+      if (chiuso) return;
+      chiuso = true;
+      chiudi();
       quandoRisponde(dati);
     };
-    x.onerror = function () { quandoFallisce(); };
-    x.ontimeout = function () { quandoFallisce(); };
-    x.timeout = 15000;
 
-    try {
-      x.send(JSON.stringify({ azione: 'satispaySchermo', token: gettone }));
-    } catch (e) {
+    tag.onerror = function () {
+      if (chiuso) return;
+      chiuso = true;
+      chiudi();
       quandoFallisce();
-    }
+    };
+
+    // Se la risposta non arriva si smette di aspettarla: senza questo, una
+    // rete che inghiotte le richieste lascerebbe la pagina appesa per
+    // sempre, e nemmeno il pallino si accenderebbe.
+    scadenza = setTimeout(function () {
+      if (chiuso) return;
+      chiuso = true;
+      chiudi();
+      quandoFallisce();
+    }, 15000);
+
+    // Il numero in fondo cambia a ogni giro: senza, un browser affezionato
+    // alle sue copie risponderebbe sempre con la prima.
+    tag.src = MOTORE + '?azione=satispaySchermo' +
+              '&token=' + encodeURIComponent(gettone) +
+              '&cb=' + nome +
+              '&_=' + new Date().getTime();
+    (document.head || document.documentElement).appendChild(tag);
   }
 
   function applica(d) {
