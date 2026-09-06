@@ -63,34 +63,38 @@ body {
 #attesa { background: transparent; }
 
 /* ─── il QR da inquadrare ───
-   Quando arriva il pagamento l'invito al gruppo sparisce: fondo bianco e
-   basta il codice. In quel momento il cliente ha una cosa sola da fare, e
-   tutto il resto e' rumore — anche una bella animazione. Il bianco pieno
-   serve anche al lettore, che ha bisogno di chiaro attorno al codice per
-   capire dove comincia.
+   Quando arriva il pagamento l'invito al gruppo sparisce e resta la
+   locandina di Satispay: quella e' un'immagine, disegnata a parte, con un
+   quadrato bianco vuoto in mezzo. Il QR vero si posa esattamente dentro
+   quel quadrato.
 
-   DUE NUMERI DA TOCCARE, se serve:
-   - QUANTO E' GRANDE: la misura di #tela qui sotto. Se da lontano non si
-     legge, si alza. Sotto i 18vmin i puntini diventano troppo fini per la
-     fotocamera di un telefono.
-   - DI CHE COLORE: il rosso sta in cima al codice, si chiama COLORE_QR.
-     Un QR si legge per differenza di chiaro e scuro, non per colore: un
-     rosso troppo acceso si avvicina al bianco e diventa faticoso da
-     leggere. Questo e' scelto scuro apposta. */
-#qr { background: #ffffff; }
-.cornice {
+   Come ci si posa: l'immagine sta in un <img> normale — cosi' il browser
+   le tiene le proporzioni da solo, anche i Safari vecchi che non sanno
+   fare object-fit — e il riquadro del QR e' un figlio posizionato in
+   PERCENTUALE su di lei. Percentuale e non pixel: l'immagine si rimpicciolisce
+   con lo schermo e il QR la segue senza scollarsi, su qualunque tablet.
+
+   Le quattro misure qui sotto sono state prese sull'immagine vera
+   (quadrato bianco di 230x230 su una locandina di 1300x1844). Se un giorno
+   si ridisegna la locandina spostando il quadrato, sono queste le righe da
+   rifare — e nient'altro. */
+#qr { background: #EF5646; }   /* lo stesso rosso della locandina: le fasce ai lati spariscono */
+
+.foglio {
+  position: relative;
+  display: inline-block;
   line-height: 0;
 }
+.foglio img {
+  display: block;
+  max-width: 100vw;
+  max-height: 100vh;
+}
+
 #tela {
-  width: 22vmin;
-  height: 22vmin;
+  position: absolute;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: pixelated;
-}
-.invito {
-  margin-top: 3.5vmin;
-  font-size: 2.4vmin;
-  color: #666;
 }
 
 /* ─── pagato ─── */
@@ -149,8 +153,10 @@ body {
 <div class="schermata visibile" id="attesa"></div>
 
 <div class="schermata" id="qr">
-  <div class="cornice"><canvas id="tela"></canvas></div>
-  <div class="invito">Inquadra con l'app Satispay</div>
+  <div class="foglio">
+    <img src="satispay.jpg" alt="">
+    <canvas id="tela"></canvas>
+  </div>
 </div>
 
 <div class="schermata" id="pagato">
@@ -564,11 +570,34 @@ var QR = (function () {
    monitor non c'è nessuno che possa accedere: al suo posto c'è il
    gettone nell'indirizzo, che il motore riconosce.
    ═══════════════════════════════════════════════════════════════════ */
-/* Il rosso del QR. Scuro apposta: un lettore distingue i puntini per
-   differenza di luminosita', e un rosso acceso su bianco e' quasi chiaro
-   quanto il fondo. Questo resta rosso a vederlo e nero abbastanza da
-   leggersi. */
-var COLORE_QR = '#c8102e';
+/* ═════ DOVE VA IL QR SULLA LOCANDINA ═══════════════════════════════
+   Misure prese sull'immagine vera: quadrato bianco di 229x229 pixel su una
+   locandina di 1300x1844, gia' convertita per lo schermo. Sono in percentuale, quindi valgono a qualunque
+   dimensione la locandina venga mostrata.
+   Si rifanno solo se si ridisegna la locandina spostando il quadrato.     */
+var QR_SINISTRA = 36.615;   // % dal bordo sinistro dell'immagine
+var QR_ALTO     = 52.874;   // % dal bordo alto
+var QR_LARGO    = 17.615;   // % della larghezza
+var QR_ALTEZZA  = 12.419;   // % dell'altezza
+
+/* Quanto il QR deborda dal quadrato bianco. 1 = lo riempie esatto, come
+   nel disegno. Alzandolo il codice diventa piu' grande e si porta dietro
+   il suo bordo bianco, quindi il quadrato sembra semplicemente piu' grande:
+   il disegno regge, e da lontano si legge meglio.
+
+   Serve perche' un QR non e' un ornamento: sotto una certa misura la
+   fotocamera non lo aggancia piu', e su uno schermo piccolo o tenuto di
+   traverso quel quadrato diventa davvero piccolo. Se al banco il cliente
+   deve avvicinarsi troppo, si alza questo numero — 1.4, 1.6 — e non si
+   tocca nient'altro. */
+var INGRANDIMENTO_QR = 1;
+
+/* Il colore dei puntini. Nero: il QR sta gia' dentro un quadrato bianco su
+   una locandina rossa, quindi il rosso ce l'ha attorno. I puntini invece
+   conviene tenerli il piu' scuri possibile — un lettore li distingue per
+   differenza di luce, e ogni sfumatura tolta al nero e' margine tolto alla
+   fotocamera. */
+var COLORE_QR = '#000000';
 
 var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0SgePOlTU38Fqxklujy2AYipeK1963F5KCV4oaUUQK-7e/exec';
 
@@ -659,6 +688,14 @@ var MOTORE = 'https://script.google.com/macros/s/AKfycbxEc6tE0gARPbH9qUOyJOP0Sge
         if (m[y][x]) c.fillRect((x + margine) * lato, (y + margine) * lato, lato, lato);
       }
     }
+    // Dove si posa: il quadrato bianco della locandina, allargato di
+    // INGRANDIMENTO_QR e ricentrato sullo stesso punto.
+    var f = Number(INGRANDIMENTO_QR) > 0 ? Number(INGRANDIMENTO_QR) : 1;
+    tela.style.left   = (QR_SINISTRA - QR_LARGO  * (f - 1) / 2) + '%';
+    tela.style.top    = (QR_ALTO     - QR_ALTEZZA * (f - 1) / 2) + '%';
+    tela.style.width  = (QR_LARGO   * f) + '%';
+    tela.style.height = (QR_ALTEZZA * f) + '%';
+
     codiceDisegnato = codice;
     return true;
   }
