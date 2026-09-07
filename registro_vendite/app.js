@@ -2918,10 +2918,124 @@ salvaReport();
     });
   }
 
+  /* ── taratura: si apre tenendo premuta la pillola ──────────────────
+     Non ha un pulsante suo perche' si usa due volte l'anno, quando cambia
+     la carta, e un tasto in piu' sul banco e' un tasto in piu' da sfiorare
+     per sbaglio con la coda davanti. Mezzo secondo di pressione non lo si
+     fa per caso. */
+  var TENUTA_MS = 500;
+  var timerTenuta = null, tenuto = false;
+
+  function taratura()  { return document.getElementById('tarataturaStampante'); }
+  function vociTaratura() {
+    return {
+      valore: document.getElementById('densitaValore'),
+      meno:   document.getElementById('btnDensitaMeno'),
+      piu:    document.getElementById('btnDensitaPiu'),
+      prova:  document.getElementById('btnStampaProva'),
+      stato:  document.getElementById('tarataturaStato')
+    };
+  }
+
+  function disegnaTaratura() {
+    var v = vociTaratura();
+    if (!v.valore) return;
+    var d = densita();
+    v.valore.textContent = String(d);
+    if (v.meno) v.meno.disabled = (d <= 0);
+    if (v.piu)  v.piu.disabled  = (d >= 15);
+  }
+
+  function apriTaratura() {
+    var t = taratura();
+    if (!t) return;
+    t.style.display = 'flex';
+    // Il .show fa la dissolvenza: va messo dopo che l'elemento esiste a
+    // schermo, se no il browser salta l'animazione.
+    setTimeout(function () { t.classList.add('show'); }, 10);
+    disegnaTaratura();
+    var v = vociTaratura();
+    if (v.stato) {
+      v.stato.textContent = connessa() ? '' : 'Stampante non collegata';
+      v.stato.className = 'satispay-riga' + (connessa() ? '' : ' rosso');
+    }
+  }
+
+  function chiudiTaratura() {
+    var t = taratura();
+    if (!t) return;
+    t.classList.remove('show');
+    setTimeout(function () { t.style.display = 'none'; }, 300);
+  }
+
+  function cambiaDensita(delta) {
+    var d = densita() + delta;
+    if (d < 0) d = 0;
+    if (d > 15) d = 15;
+    try { localStorage.setItem(DENSITA_CHIAVE, String(d)); } catch (e) {}
+    disegnaTaratura();
+  }
+
+  function stampaProva() {
+    var v = vociTaratura();
+    if (!connessa()) {
+      if (v.stato) {
+        v.stato.textContent = 'Collega prima la stampante';
+        v.stato.className = 'satispay-riga rosso';
+      }
+      return;
+    }
+    if (v.prova) { v.prova.disabled = true; v.prova.textContent = 'Sto stampando...'; }
+    if (v.stato) { v.stato.textContent = ''; v.stato.className = 'satispay-riga'; }
+    window.stampante.prova().then(function (esito) {
+      if (v.prova) { v.prova.disabled = false; v.prova.textContent = 'Stampa una prova'; }
+      if (v.stato && !esito) {
+        v.stato.textContent = 'Non e\' uscito niente: guarda la carta e il collegamento';
+        v.stato.className = 'satispay-riga rosso';
+      }
+    }, function () {
+      if (v.prova) { v.prova.disabled = false; v.prova.textContent = 'Stampa una prova'; }
+      if (v.stato) {
+        v.stato.textContent = 'La stampante non ha risposto';
+        v.stato.className = 'satispay-riga rosso';
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var el = pillola();
     if (!el) return;
-    el.addEventListener('click', alterna);
+
+    // Tenuta lunga: apre la taratura e ANNULLA il click, se no aprirebbe il
+    // pannello e insieme staccherebbe la stampante.
+    var inizia = function () {
+      tenuto = false;
+      if (timerTenuta) clearTimeout(timerTenuta);
+      timerTenuta = setTimeout(function () { tenuto = true; apriTaratura(); }, TENUTA_MS);
+    };
+    var finisce = function () {
+      if (timerTenuta) { clearTimeout(timerTenuta); timerTenuta = null; }
+    };
+    el.addEventListener('touchstart', inizia, { passive: true });
+    el.addEventListener('touchend', finisce);
+    el.addEventListener('touchmove', finisce);
+    el.addEventListener('mousedown', inizia);
+    el.addEventListener('mouseup', finisce);
+    el.addEventListener('mouseleave', finisce);
+
+    var chiudi = document.getElementById('btnChiudiTaratura');
+    if (chiudi) chiudi.addEventListener('click', chiudiTaratura);
+    var t = taratura();
+    if (t) t.addEventListener('click', function (e) { if (e.target === t) chiudiTaratura(); });
+    var v = vociTaratura();
+    if (v.meno)  v.meno.addEventListener('click', function () { cambiaDensita(-1); });
+    if (v.piu)   v.piu.addEventListener('click', function () { cambiaDensita(1); });
+    if (v.prova) v.prova.addEventListener('click', stampaProva);
+
+    el.addEventListener('click', function () {
+      if (tenuto) { tenuto = false; return; }   // era una tenuta, non un tocco
+      alterna();
+    });
     el.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alterna(); }
     });

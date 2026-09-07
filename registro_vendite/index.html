@@ -1843,6 +1843,32 @@ placeholder="Banconota (€)">
 <span class="status-text">Stampante</span>
 </div>
 
+<!-- Taratura della stampante. Non ha un pulsante suo perche' si usa due
+     volte l'anno — quando cambia la carta — e un tasto in piu' sul banco e'
+     un tasto in piu' da sbagliare con la coda davanti. Si apre tenendo
+     premuta la pillola della stampante per mezzo secondo. -->
+<div id="tarataturaStampante" class="success-overlay" style="display:none">
+<div class="success-overlay-content" style="max-width:340px;padding:28px">
+<button type="button" class="success-overlay-close" id="btnChiudiTaratura">&times;</button>
+<h3 style="margin-bottom:6px">Stampante</h3>
+<p style="color:#666;font-size:14px;margin:0 0 20px">
+Stampa uno scontrino finto per vedere come viene. Se esce grigio alza il
+calore, se sbava abbassalo.</p>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px">
+<span style="font-weight:600">Calore</span>
+<div style="display:flex;align-items:center;gap:14px">
+<button type="button" class="taratura-passo" id="btnDensitaMeno">&minus;</button>
+<span id="densitaValore" style="font-size:20px;font-weight:700;min-width:2ch;text-align:center">8</span>
+<button type="button" class="taratura-passo" id="btnDensitaPiu">+</button>
+</div>
+</div>
+
+<button type="button" class="satispay-btn" id="btnStampaProva">Stampa una prova</button>
+<div class="satispay-riga" id="tarataturaStato"></div>
+</div>
+</div>
+
 
 <!-- ═══════════════════════════════════════════════════════════════════
      GUSCIO DEL GESTIONALE
@@ -1903,6 +1929,20 @@ placeholder="Banconota (€)">
 /* Il solo annullo che si preme col cliente davanti al lettore: pieno, non
    di contorno, cosi' lo si trova senza doverlo leggere. */
 .satispay-btn.annulla.pieno { background: #c62828; color: #fff; border-color: #c62828; }
+/* I due tasti del calore: grandi abbastanza da premerli col pollice. */
+.taratura-passo {
+  width: 44px; height: 44px;
+  font-size: 22px; font-weight: 700;
+  line-height: 1;
+  color: #333;
+  background: #f2f2f2;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.taratura-passo:active { background: #e2e2e2; }
+.taratura-passo:disabled { opacity: .35; cursor: default; }
+#tarataturaStampante .satispay-riga { text-align: center; }
 .satispay-riga {
   margin-top: 10px;
   min-height: 18px;
@@ -2089,7 +2129,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=14';
+      s.src = 'app.js?v=15';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
