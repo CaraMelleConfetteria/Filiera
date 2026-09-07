@@ -3663,7 +3663,8 @@ salvaReport();
   function annulla(poiRifai, poiLascia) {
     ferma();
     stato = 'chiedendo';
-    messaggio = 'Sto fermando il lettore...';
+    // Niente scritte: dura un attimo e il pulsante dice già «Un momento...».
+    messaggio = '';
     disegna();
 
     motore('sumupAnnulla', []).then(function (s) {
@@ -3708,7 +3709,9 @@ salvaReport();
   function totaleDiverso() {
     ferma();
     stato = 'chiedendo';
-    messaggio = 'Il totale è cambiato: fermo il lettore...';
+    // Come le altre: e' un "sto facendo una cosa" che dura un attimo, e
+    // quello che conta lo dice il messaggio dopo, con la cifra nuova.
+    messaggio = '';
     disegna();
 
     motore('sumupAnnulla', []).then(function (s) {
