@@ -1912,7 +1912,17 @@ placeholder="Banconota (€)">
   text-align: center;
 }
 .satispay-riga.verde { color: #1e8e3e; font-weight: 600; }
-.satispay-riga.rosso { color: #c62828; }
+/* Non piu' testo rosso ma un rettangolo rosso: quando qualcosa non e'
+   andato bene lo si deve vedere senza leggerlo, dall'altra parte del banco
+   e con le mani occupate. Vale per tutti e due i moduli apposta: due
+   avvisi identici che si vestono in modo diverso sono un difetto. */
+.satispay-riga.rosso {
+  color: #fff;
+  background: #c62828;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
 
 #accessoBottone { display: flex; justify-content: center; min-height: 44px; }
 .accesso-nota { margin-top: 18px; font-size: 12px; line-height: 1.5; color: #c62828; min-height: 18px; }
@@ -2079,7 +2089,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=9';
+      s.src = 'app.js?v=12';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');

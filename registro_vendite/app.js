@@ -3545,7 +3545,8 @@ salvaReport();
 
     ferma();
     stato = 'chiedendo';
-    messaggio = 'Mando l\'importo al lettore...';
+    // Niente scritte: dura un attimo e il pulsante dice già «Un momento...».
+    messaggio = '';
     disegna();
 
     var cliente = '';
@@ -3567,7 +3568,10 @@ salvaReport();
       cartaRifiutata = false;
       stato = 'lettore';
       importo = s.importo;
-      messaggio = 'Sul lettore ci sono ' + euro(s.importo) + ' — fai appoggiare la carta';
+      // Il lettore è acceso davanti al cliente con la cifra sopra: dice già
+      // tutto lui, meglio e più in grande. Ripeterlo qui sarebbe una cosa da
+      // leggere che non aggiunge niente.
+      messaggio = '';
       disegna();
       timer = setTimeout(guarda, RITMO_MS);
     }, function (err) {
@@ -3629,10 +3633,10 @@ salvaReport();
         return;
       }
 
-      var mancano = Math.round((s.mancano || 0) / 1000);
-      messaggio = 'Sul lettore ci sono ' + euro(s.importo) +
-                  (mancano > 0 ? ' — ' + mancano + 's' : '');
-      if (s.errore) messaggio += ' (rete instabile)';
+      // Nessun conto alla rovescia: mette fretta e non serve a decidere
+      // niente. Resta solo quello che il lettore NON può dire da sé, cioè
+      // che la linea sta facendo i capricci e la conferma può tardare.
+      messaggio = s.errore ? 'Rete instabile — la cifra è ancora sul lettore' : '';
       disegna();
       timer = setTimeout(guarda, RITMO_MS);
 
