@@ -3393,6 +3393,10 @@ salvaReport();
   // Il lettore non si è fermato quando glielo abbiamo chiesto. Finché è
   // vero, questo metodo di pagamento NON si lascia.
   var lettoreNonFermato = false;
+  // La carta è stata rifiutata. Si tiene a parte invece di guardare il
+  // testo del messaggio: gli stati non si riconoscono dalle parole che
+  // capita di averci scritto sopra.
+  var cartaRifiutata = false;
 
   var timer = null;
   var timerTotale = null;
@@ -3463,6 +3467,14 @@ salvaReport();
       p.className = 'satispay-btn annulla pieno';
       p.disabled = false;
       p.classList.remove('hidden');
+    } else if (stato === 'errore' && cartaRifiutata) {
+      // Una cosa sola invece di due: dice cosa è successo E cosa fa se la
+      // premi. Un rettangolo rosso da leggere più un pulsante da cercare
+      // sono due gesti dove ne basta uno, col cliente che aspetta.
+      p.textContent = 'Carta rifiutata — Riprova';
+      p.className = 'satispay-btn annulla pieno';
+      p.disabled = false;
+      p.classList.remove('hidden');
     } else if (stato === 'errore') {
       p.textContent = altruiInCorso ? 'Annulla il pagamento in corso' : 'Riprova';
       p.className = 'satispay-btn' + (altruiInCorso ? ' annulla' : '');
@@ -3477,8 +3489,10 @@ salvaReport();
       p.className = 'satispay-btn hidden';
     }
 
-    r.textContent = messaggio;
-    r.className = 'satispay-riga' + (stato === 'errore' ? ' rosso' : '');
+    // Con la carta rifiutata lo dice già il pulsante: qui sotto non si
+    // ripete la stessa cosa in un secondo rettangolo rosso.
+    r.textContent = cartaRifiutata ? '' : messaggio;
+    r.className = 'satispay-riga' + (stato === 'errore' && !cartaRifiutata ? ' rosso' : '');
 
     // Il pulsante SumUp dice da solo com'è andata, come quello di Satispay:
     // verde se il cliente ha pagato, rosso se qualcosa non è andato.
@@ -3541,6 +3555,7 @@ salvaReport();
     motore('sumupAvvia', [totale, cliente]).then(function (s) {
       if (!s || !s.success) {
         stato = 'errore';
+        cartaRifiutata = false;
         altruiInCorso = !!(s && s.inCorso);
         messaggio = (s && s.errore) || 'SumUp non ha accettato la richiesta';
         disegna();
@@ -3549,6 +3564,7 @@ salvaReport();
       altruiInCorso = false;
       riferimentoPagato = '';
       lettoreNonFermato = false;
+      cartaRifiutata = false;
       stato = 'lettore';
       importo = s.importo;
       messaggio = 'Sul lettore ci sono ' + euro(s.importo) + ' — fai appoggiare la carta';
@@ -3584,8 +3600,28 @@ salvaReport();
         return;
       }
 
-      if (s.stato === 'annullato' || s.stato === 'scaduto' || s.stato === 'attesa') {
+      // Annullato sul lettore: l'ha premuto una persona che era lì. Non si
+      // mostra niente — né rosso né spiegazioni — e si lascia libero anche
+      // il metodo, così si sceglie subito come incassare davvero invece di
+      // dover prima togliere SumUp a mano.
+      if (s.stato === 'annullato') {
+        stato = 'fermo';
+        messaggio = '';
+        importo = 0;
+        lettoreNonFermato = false;
+        cartaRifiutata = false;
+        disegna();
+        if (typeof togglePagamento === 'function' && metodoPagamentoSelezionato === 'SumUp') {
+          togglePagamento('SumUp');
+        }
+        return;
+      }
+
+      // Carta rifiutata o tempo scaduto: qui invece nessuno al banco ha
+      // deciso niente, e va detto.
+      if (s.stato === 'fallito' || s.stato === 'scaduto' || s.stato === 'attesa') {
         stato = 'errore';
+        cartaRifiutata = (s.stato === 'fallito');
         messaggio = s.errore || (s.stato === 'scaduto'
           ? 'Tempo scaduto: controlla il lettore.'
           : 'Pagamento annullato.');
@@ -3767,6 +3803,7 @@ salvaReport();
     messaggio = '';
     riferimentoPagato = '';
     lettoreNonFermato = false;
+    cartaRifiutata = false;
     disegna();
     if (!daLiberare) return;
     motore(eraSulLettore ? 'sumupAnnulla' : 'sumupLibera', []).then(function () {}, function () {});
@@ -3800,6 +3837,7 @@ salvaReport();
             annulla(true, false);
           } else {
             lettoreNonFermato = false;
+            cartaRifiutata = false;
             stato = 'fermo'; messaggio = ''; disegna(); chiedi();
           }
         }
