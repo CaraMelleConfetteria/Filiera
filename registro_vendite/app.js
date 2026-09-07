@@ -3456,8 +3456,11 @@ salvaReport();
       p.disabled = false;
       p.classList.remove('hidden');
     } else if (stato === 'lettore') {
-      p.textContent = 'Annulla sul lettore';
-      p.className = 'satispay-btn annulla';
+      // Rosso pieno, non il contorno rosso degli altri: e' l'unico che si
+      // preme col cliente fermo davanti al lettore, e deve trovarsi al
+      // primo colpo senza leggere niente.
+      p.textContent = 'Annulla';
+      p.className = 'satispay-btn annulla pieno';
       p.disabled = false;
       p.classList.remove('hidden');
     } else if (stato === 'errore') {

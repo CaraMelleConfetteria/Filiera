@@ -1900,6 +1900,9 @@ placeholder="Banconota (€)">
 }
 .satispay-btn:disabled { opacity: .55; cursor: default; }
 .satispay-btn.annulla { background: #fff; color: #c62828; border-color: #c62828; }
+/* Il solo annullo che si preme col cliente davanti al lettore: pieno, non
+   di contorno, cosi' lo si trova senza doverlo leggere. */
+.satispay-btn.annulla.pieno { background: #c62828; color: #fff; border-color: #c62828; }
 .satispay-riga {
   margin-top: 10px;
   min-height: 18px;
@@ -2076,7 +2079,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=8';
+      s.src = 'app.js?v=9';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
