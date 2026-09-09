@@ -1,1 +1,346 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Oliveti Giachino</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --brown: #2C1A0E;
+      --brown-light: #5C3D2E;
+      --gold: #B8893A;
+      --gold-light: #D4A853;
+      --gray: #8A7A6E;
+      --border: #EBEBEB;
+    }
+
+    body {
+      font-family: 'Raleway', sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      position: relative;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 0;
+      max-width: 400px;
+      width: 100%;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card::before {
+      content: '';
+      display: block;
+      height: 3px;
+      background: #ff7700;
+    }
+
+    .card-header {
+      padding: 20px 28px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .logo-wrap {
+      width: 300px;
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .logo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #ff7700;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'Raleway', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 300;
+      color: var(--brown);
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+
+    .company {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--brown-light);
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    .product-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray);
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 20px 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .contact-item:last-child { border-bottom: none; }
+    .contact-item:hover .contact-label { color: #ff7700; }
+    .contact-item:hover .icon { color: #ff7700; }
+
+    .icon {
+      width: 18px;
+      color: #CCCCCC;
+      flex-shrink: 0;
+      transition: color 0.2s;
+    }
+
+    .contact-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #CCCCCC;
+      display: block;
+      margin-bottom: 3px;
+      transition: color 0.2s;
+    }
+
+    .contact-value {
+      font-size: 0.88rem;
+      color: var(--brown);
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-save {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--brown);
+      color: #ffffff;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 32px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+
+    .btn-save:hover { background: #ff7700; }
+
+    
+  </style>
+</head>
+<body>
+
+  <!-- ═══ LINGUA ═══
+       Versione ridotta di quello della pagina principale: qui le stringhe
+       sono sette. La lingua arriva da ?lang= o dall'ultima scelta salvata,
+       così chi apre questa scheda dalla pagina in inglese la trova in
+       inglese. L'italiano non sta nel dizionario: resta scritto nel
+       documento e fa da ripiego. -->
+  <script>
+  (function () {
+    var EN = {
+      'indietro':  'Explore the supply chain',
+      'etichetta': 'Supplier \u00b7 Supply chain',
+      'prodotto':  'Olive oil',
+      'Telefono':  'Phone',
+      'Sito web':  'Website',
+      'Indirizzo': 'Address',
+      'salva':     'Save contact'
+    };
+
+    /* Stessa regola della pagina principale: l'inglese salvato vale solo
+       finché il browser non è italiano, così rimettendo l'italiano nelle
+       impostazioni si torna in italiano anche da qui. */
+    var lang = 'it';
+    try {
+      var chiesta = new URLSearchParams(location.search).get('lang');
+      var browserStraniero = (navigator.language || '').toLowerCase().indexOf('it') !== 0;
+      if (chiesta === 'en' || chiesta === 'it') {
+        lang = chiesta;
+        localStorage.setItem('cv_lang', lang);
+      } else if (browserStraniero && localStorage.getItem('cv_lang') === 'en') {
+        lang = 'en';
+      }
+    } catch (e) {}
+
+    document.documentElement.lang = lang;
+    if (lang !== 'en') return;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var nodi = document.querySelectorAll('[data-i18n]');
+      for (var i = 0; i < nodi.length; i++) {
+        var v = EN[nodi[i].getAttribute('data-i18n')];
+        if (v) nodi[i].textContent = v;
+      }
+      // WhatsApp ed Email si scrivono uguale: cambiano solo le altre due
+      var etich = document.querySelectorAll('.contact-label');
+      for (var j = 0; j < etich.length; j++) {
+        var t = etich[j].textContent.trim();
+        if (EN[t]) etich[j].textContent = EN[t];
+      }
+      // Il ritorno alla filiera si porta dietro la lingua
+      var su = document.getElementById('cvSu');
+      if (su) su.setAttribute('href', '../?lang=en');
+    });
+  })();
+  </script>
+
+ <div style="max-width: 400px; width: 100%;">
+    <a id="cvSu" href="../" style="
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ff7700;
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    " onmouseover="this.style.color='#000000'" onmouseout="this.style.color='#ff7700'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      <span data-i18n="indietro">Scopri la filiera</span>
+    </a>
+    <div class="card">
+    <div class="card-header">
+      <div class="logo-wrap">
+      <img src="../img/Oliveti%20Giachino.jpg" alt="Oliveti Giachino">
+      </div>
+      <div class="label" data-i18n="etichetta">Fornitore · Filiera</div>
+      <h1>Oliveti Giachino</h1>
+      <div class="product-tag" data-i18n="prodotto">Olio</div>
+    </div>
+      
+      <div class="card-body">
+      <a class="contact-item" href="mailto:info@olivetigiachino.it" target="_blank" rel="noopener">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M2 7l10 7 10-7"/>
+        </svg>
+        <div>
+          <span class="contact-label">Email</span>
+          <span class="contact-value">info@olivetigiachino.it</span>
+        </div>
+      </a>
+
+      <a class="contact-item" href="https://olivetigiachino.it/" target="_blank" rel="noopener">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+        </svg>
+        <div>
+          <span class="contact-label">Sito web</span>
+          <span class="contact-value">olivetigiachino.it</span>
+        </div>
+      </a>
+
+      <a class="contact-item" href="https://maps.google.com/?q=Regione+Grangiasse+1+Front+TO" target="_blank" rel="noopener">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <div>
+          <span class="contact-label">Indirizzo</span>
+          <span class="contact-value">Regione Grangiasse 1 — 10070 Front (TO)</span>
+        </div>
+      </a>
+    </div>
+
+    <div style="padding: 28px 40px 36px; border-top: 1px solid var(--border); display: flex; justify-content: center;">
+      <a class="btn-save" id="download-vcf" href="#">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span data-i18n="salva">Salva Contatto</span>
+      </a>
+    </div>
+    </div>
+  </div>
+
+  <script>
+    const vcfData = `BEGIN:VCARD
+VERSION:4.0
+FN:Oliveti Giachino
+ORG:Olio
+EMAIL;TYPE=WORK:info@olivetigiachino.it
+URL:https://olivetigiachino.it/
+ADR;TYPE=WORK:;;Regione Grangiasse 1;Front;TO;10070;Italy
+END:VCARD`;
+
+    const dlBtn = document.getElementById("download-vcf");
+    if (dlBtn) {
+      dlBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        const blob = new Blob([vcfData], { type: "text/vcard" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "Oliveti-Giachino.vcf";
+        a.click();
+      });
+    }
+  </script>
+</body>
+</html>
