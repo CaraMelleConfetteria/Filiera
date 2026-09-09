@@ -3295,7 +3295,6 @@ salvaReport();
     if (!b || !p || !r) return;
 
     var attivo = (metodoPagamentoSelezionato === 'Satispay');
-    b.classList.toggle('hidden', !attivo);
 
     // Il pulsante serve solo per annullare o per riprovare: chiedere il QR
     // non è più un gesto, succede da sé.
@@ -3328,9 +3327,16 @@ salvaReport();
     }
 
     // Se lo dice gia' il pulsante, qui sotto non si ripete.
-    r.textContent = annullatoDalCliente ? '' : messaggio;
+    var testoRiga = annullatoDalCliente ? '' : messaggio;
+    r.textContent = testoRiga;
     r.className = 'satispay-riga' +
       ((stato === 'errore' && !annullatoDalCliente) ? ' rosso' : '');
+
+    // Niente da premere e niente da leggere: il blocco sparisce del tutto
+    // invece di restare a schermo come una fascia vuota. Serve da quando la
+    // fiscalita' spenta non scrive piu' niente qui sotto.
+    b.classList.toggle('hidden',
+      !attivo || (p.classList.contains('hidden') && !testoRiga));
 
     // Il pulsante Satispay dice da solo com'e' andata: VERDE se il cliente
     // ha pagato, ROSSO se qualcosa non e' andato. Torna arancione appena si
@@ -3458,8 +3464,20 @@ salvaReport();
 
     motore('satispayAvvia', [totale, cliente.trim()]).then(function (s) {
       if (!s || !s.success) {
-        stato = 'errore';
         annullatoDalCliente = false;
+        // Lo schermo del cliente e' spento. Non e' un guasto e non deve
+        // diventare un tasto rosso: e' una scelta che si fa al banco quando
+        // la batteria e' agli sgoccioli. Il gestionale smette di guidare
+        // Satispay — nessun pagamento creato, niente da annullare, vendita
+        // registrabile — e si incassa col cartellino di carta.
+        if (s && s.schermoSpento) {
+          altruiInCorso = false;
+          stato = 'manuale';
+          messaggio = s.errore || 'Schermo del cliente spento: usa il cartellino sul banco.';
+          disegna();
+          return;
+        }
+        stato = 'errore';
         altruiInCorso = !!(s && s.inCorso);
         messaggio = (s && s.errore) || 'Satispay non ha accettato la richiesta';
         disegna();
@@ -3543,7 +3561,10 @@ salvaReport();
 
     importoFisso = totale;
     stato = 'fisso';
-    messaggio = 'Fiscalità spenta: QR fisso del banco sullo schermo del cliente — l\'incasso lo controlli tu';
+    // Niente da scrivere: la bandierina rossa in cima allo schermo dice
+    // gia' che la fiscalita' e' sospesa, e ripeterlo qui sotto e' una riga
+    // da leggere col cliente davanti che non aggiunge niente.
+    messaggio = '';
     disegna();
     motore('satispayFisso', [totale]).then(function (esito) {
       if (stato !== 'fisso') return;
@@ -3573,6 +3594,11 @@ salvaReport();
 
     if (metodoPagamentoSelezionato !== 'Satispay') return;
     if (stato === 'pagato' || stato === 'chiedendo') return;
+    // Schermo spento: si e' gia' chiesto una volta e la risposta e' stata no.
+    // Rifare la domanda a ogni prodotto battuto vuol dire una chiamata al
+    // motore per niente, tutto il giorno. Si riparte toccando di nuovo
+    // Satispay — che e' anche il gesto che si fa se lo schermo torna acceso.
+    if (stato === 'manuale') return;
 
     var totale = totaleAschermo();
 
@@ -3601,14 +3627,16 @@ salvaReport();
   // pagare in un altro modo e nessuno deve poterlo inquadrare per sbaglio.
   function cambiaMetodo() {
     if (metodoPagamentoSelezionato === 'Satispay') {
-      if (stato === 'errore') { stato = 'fermo'; messaggio = ''; }
+      if (stato === 'errore' || stato === 'manuale') { stato = 'fermo'; messaggio = ''; }
       disegna();
       valuta();
     } else {
       if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
       if (stato === 'fisso') { mostraFisso(); return; }
       if (stato === 'attesa') annulla(false);
-      else if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
+      else if (stato === 'errore' || stato === 'pagato' || stato === 'manuale') {
+        stato = 'fermo'; messaggio = '';
+      }
       disegna();
     }
   }
@@ -3714,12 +3742,14 @@ salvaReport();
 
     if (!fiscalitaAccesa()) {
       if (stato === 'attesa') { annulla(false); return; }   // il resto lo fa l'annullo
-      if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
+      if (stato === 'errore' || stato === 'pagato' || stato === 'manuale') {
+        stato = 'fermo'; messaggio = '';
+      }
       mostraFisso();
       return;
     }
 
-    if (stato === 'fisso') { stato = 'fermo'; messaggio = ''; importoFisso = 0; }
+    if (stato === 'fisso' || stato === 'manuale') { stato = 'fermo'; messaggio = ''; importoFisso = 0; }
     valuta();
   }
 
@@ -3836,7 +3866,6 @@ salvaReport();
     // vendita, e nasconderlo lascerebbe la cassiera davanti a un rifiuto
     // senza via d'uscita.
     var attivo = (metodoPagamentoSelezionato === 'SumUp') || lettoreNonFermato;
-    b.classList.toggle('hidden', !attivo);
 
     if (lettoreNonFermato) {
       p.textContent = 'Ho controllato: non ha incassato';
@@ -3877,8 +3906,13 @@ salvaReport();
 
     // Con la carta rifiutata lo dice già il pulsante: qui sotto non si
     // ripete la stessa cosa in un secondo rettangolo rosso.
-    r.textContent = cartaRifiutata ? '' : messaggio;
+    var testoRiga = cartaRifiutata ? '' : messaggio;
+    r.textContent = testoRiga;
     r.className = 'satispay-riga' + (stato === 'errore' && !cartaRifiutata ? ' rosso' : '');
+
+    // Come su Satispay: blocco vuoto, blocco via.
+    b.classList.toggle('hidden',
+      !attivo || (p.classList.contains('hidden') && !testoRiga));
 
     // Il pulsante SumUp dice da solo com'è andata, come quello di Satispay:
     // verde se il cliente ha pagato, rosso se qualcosa non è andato.
@@ -4133,7 +4167,8 @@ salvaReport();
       return;
     }
     stato = 'manuale';
-    messaggio = 'Fiscalità spenta: l\'importo lo batti tu sul lettore';
+    // Come su Satispay: lo dice gia' la bandierina rossa in cima.
+    messaggio = '';
     disegna();
   }
 
