@@ -2733,10 +2733,15 @@ salvaReport();
     push("12020 Frassino (CN)\n");
     push("P.IVA 01614180626\n\n");
 
+    // «DOCUMENTO COMMERCIALE / di vendita o prestazione» e' la formula del
+    // documento fiscale: su una carta che all'Agenzia non e' mai arrivata
+    // sarebbe una dichiarazione falsa stampata in grassetto. Quando la
+    // fiscalita' e' spenta la testata lo dice subito, in cima, dove si legge
+    // per primo — non solo in fondo.
     grassetto(true);
-    push("DOCUMENTO COMMERCIALE\n");
+    push(dati.nonFiscale ? "DOCUMENTO NON FISCALE\n" : "DOCUMENTO COMMERCIALE\n");
     grassetto(false);
-    push("di vendita o prestazione\n\n");
+    push(dati.nonFiscale ? "promemoria di vendita\n\n" : "di vendita o prestazione\n\n");
 
     // Corpo
     sinistra();
@@ -2767,10 +2772,20 @@ salvaReport();
     grassetto(false);
     push(lr("Pagato " + (dati.contante ? "contante" : "elettronico"), euro(dati.totale)) + "\n\n");
 
-    // Estremi del documento fiscale a cui questa carta si riferisce
+    // Estremi del documento fiscale a cui questa carta si riferisce. Se la
+    // fiscalita' era spenta quel documento non esiste, e al suo posto si
+    // scrive cosa questa carta e' davvero: data e ora restano, perche' sono
+    // l'unico riferimento per ritrovare la vendita nel registro.
     centro();
-    if (dati.progressivo) push("Documento N. " + ascii(dati.progressivo) + "\n");
-    if (dati.dataOra) push("del " + ascii(dati.dataOra) + "\n");
+    if (dati.nonFiscale) {
+      grassetto(true);
+      push("Documento non fiscale\n");
+      grassetto(false);
+      if (dati.dataOra) push("del " + ascii(dati.dataOra) + "\n");
+    } else {
+      if (dati.progressivo) push("Documento N. " + ascii(dati.progressivo) + "\n");
+      if (dati.dataOra) push("del " + ascii(dati.dataOra) + "\n");
+    }
     push("\n");
 
     grassetto(true);
@@ -3069,6 +3084,20 @@ salvaReport();
         aliquote: [{ aliquota: 10, imponibile: 22.27, imposta: 2.23 }],
         totale: 24.5, contante: true,
         progressivo: 'PROVA', dataOra: 'prova di stampa'
+      });
+    },
+    // La stessa prova, ma com'esce a fiscalita' spenta: serve a vedere che i
+    // due fogli non si somiglino troppo, prima di averne uno in mano al banco.
+    provaNonFiscale: function () {
+      return stampa({
+        righe: [
+          { nome: 'Ghiaie', dettaglio: '2 confezioni x 100g', importo: 14 },
+          { nome: 'Nibs', dettaglio: 'sfuso 100g', importo: 3.5 }
+        ],
+        sconto: 0, imponibile: 15.91,
+        aliquote: [{ aliquota: 10, imponibile: 15.91, imposta: 1.59 }],
+        totale: 17.5, contante: true,
+        nonFiscale: true, progressivo: '', dataOra: 'prova di stampa'
       });
     }
   };
