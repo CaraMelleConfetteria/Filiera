@@ -3420,9 +3420,10 @@ salvaReport();
         return;
       }
 
-      var mancano = Math.round((s.mancano || 0) / 1000);
-      messaggio = 'In attesa che il cliente confermi ' + euro(s.importo) +
-                  (mancano > 0 ? ' — ' + mancano + 's' : '');
+      // Ne' cifra ne' conto alla rovescia, come su SumUp: la cifra il
+      // cliente ce l'ha davanti nell'app, e il timer metteva fretta a chi
+      // sta pagando senza dire niente a chi sta al banco.
+      messaggio = 'In attesa che il cliente confermi';
       if (s.errore) messaggio += ' (rete instabile)';
       disegna();
       timer = setTimeout(guarda, RITMO_MS);
@@ -3462,7 +3463,9 @@ salvaReport();
       annullatoDalCliente = false;
       stato = 'attesa';
       importo = s.importo;
-      messaggio = 'QR sullo schermo del cliente — ' + euro(s.importo);
+      // Che il QR sia a schermo lo si vede: e' sullo schermo. La riga dice
+      // la sola cosa che al banco non si vede, cioe' che si sta aspettando.
+      messaggio = 'In attesa che il cliente confermi';
       disegna();
       timer = setTimeout(guarda, RITMO_MS);
 
@@ -3754,11 +3757,13 @@ salvaReport();
       p.disabled = false;
       p.classList.remove('hidden');
     } else if (stato === 'lettore') {
-      // Rosso pieno, non il contorno rosso degli altri: e' l'unico che si
-      // preme col cliente fermo davanti al lettore, e deve trovarsi al
-      // primo colpo senza leggere niente.
+      // Stesso vestito dell'annullo di Satispay: contorno rosso. I due
+      // pulsanti fanno la stessa cosa nello stesso momento, e vestirli in
+      // due modi diversi obbligava a riconoscere il metodo prima del gesto.
+      // Il rosso pieno resta a chi porta una notizia — «Carta rifiutata»,
+      // «Annullato» — non a chi offre una via d'uscita.
       p.textContent = 'Annulla';
-      p.className = 'satispay-btn annulla pieno';
+      p.className = 'satispay-btn annulla';
       p.disabled = false;
       p.classList.remove('hidden');
     } else if (stato === 'errore' && cartaRifiutata) {
