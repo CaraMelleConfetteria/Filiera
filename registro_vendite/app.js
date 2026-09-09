@@ -334,6 +334,10 @@ self.aggiornaBadgeCoda();
 // documento, qui non c'e' proprio niente e i soldi in mano sono senza vendita.
 if (risposta && risposta.registrata === false) {
   console.error('Vendita rifiutata:', risposta.messaggio);
+  // Il pulsante deve dirlo anche col colore: chi sta al banco guarda quello,
+  // non legge il log. Se nel frattempo si e' gia' passati alla vendita dopo,
+  // segnalaEsitoVendita se ne accorge dall'id e non fa niente.
+  try { segnalaEsitoVendita(vendita.id, false); } catch (eSeg) {}
   try { alert('VENDITA NON REGISTRATA\n\n' + (risposta.messaggio || 'La vendita non e\' stata registrata.') +
               '\n\nNon e\' stato scritto niente nel registro e non e\' stato emesso nessuno scontrino.\n\n' +
               'Sistema il dato mancante nel Foglio e RIFAI la vendita da capo.'); } catch (e) {}
@@ -1604,6 +1608,11 @@ toggleCalcoloResto();
 // Satispay: scegliendolo il QR parte da solo, lasciandolo si spegne.
 if (window.satispay) window.satispay.cambiaMetodo();
 if (window.sumup) window.sumup.cambiaMetodo();
+// Il metodo di pagamento e' uno dei passaggi obbligatori: il semaforo deve
+// saperlo. Ci arriverebbe anche di rimbalzo dai due moduli qui sopra, ma
+// dipendere da quel rimbalzo vorrebbe dire che togliendo Satispay un giorno
+// si spegne anche il pulsante, senza capire perche'.
+aggiornaPulsanteDinamico();
 button.blur();
 }
 
@@ -1650,29 +1659,107 @@ restoDisplay.className = "resto-display";
 }
 }
 
+/**
+ * Perche' la vendita NON si puo' ancora registrare. null = si puo'.
+ *
+ * E' la lista dei passaggi obbligatori, in un posto solo. Prima erano
+ * sparsi: il carrello lo guardava una funzione, il metodo di pagamento
+ * un'altra, Satispay e SumUp spegnevano il pulsante per conto loro con
+ * l'opacita'. Tre padroni sullo stesso pulsante, e nessuno che sapesse
+ * cosa avevano deciso gli altri.
+ */
+function motivoNonRegistrabile() {
+  if (!ciSonoProdotti()) return 'Seleziona i prodotti';
+  if (!metodoPagamentoSelezionato) return 'Scegli come ha pagato';
+
+  // Il cliente non ha ancora confermato: il QR e' ancora a schermo, o la
+  // cifra e' ancora sul lettore. Registrare adesso vorrebbe dire dare per
+  // incassato un pagamento che puo' ancora non arrivare.
+  var attesa = (window.satispay ? window.satispay.motivoBlocco() : null) ||
+               (window.sumup ? window.sumup.motivoBlocco() : null);
+  if (attesa) return attesa;
+
+  return null;
+}
+
+/**
+ * Il pulsante «Registra Vendita» come semaforo.
+ *
+ *   SPENTO  manca un passaggio — e passandoci sopra il titolo dice quale
+ *   VERDE   si puo' procedere: o la vendita e' completa, o e' WhatsApp
+ *   ROSSO   e' stato premuto e la registrazione non e' riuscita
+ *
+ * Questa funzione e' l'UNICA che tocca il pulsante. Chiunque cambi
+ * qualcosa — carrello, metodo di pagamento, stato di Satispay o SumUp —
+ * la richiama e basta.
+ */
 function aggiornaPulsanteDinamico() {
-  // Solo se siamo nella pagina gestionale
   if (document.getElementById('paginaGestionale').classList.contains('hidden')) return;
-  
+
   var submitBtn = document.getElementById('btnRegistraVendita');
   if (!submitBtn) return;
-  
-var telefono = document.getElementById("telefono").value.trim();
-var soloNumeri = telefono.replace(/[^0-9]/g, '');
-var telefonoValido = soloNumeri.length >= 9;
-  
-var hasProdotti = ciSonoProdotti();
 
-if (telefonoValido && !hasProdotti) {
-submitBtn.textContent = "Invita su WhatsApp";
-submitBtn.classList.remove('error', 'success');
-submitBtn.classList.add('invite');
-submitBtn.style.background = "#28a745";
-} else {
-submitBtn.textContent = "Registra Vendita";
-submitBtn.classList.remove('error', 'success', 'invite');
-submitBtn.style.background = "#1a1a1a";
+  // Mentre la vendita e' in volo comanda invia(): se no il primo cambiamento
+  // del carrello rimetterebbe «Registra Vendita» sopra a «Salvando...».
+  if (submitBtn.dataset.inCorso === '1') return;
+
+  var telefono = document.getElementById("telefono").value.trim();
+  var telefonoValido = telefono.replace(/[^0-9]/g, '').length >= 9;
+
+  submitBtn.classList.remove('error', 'success', 'invite', 'pronto');
+  submitBtn.style.background = '';
+  submitBtn.style.pointerEvents = '';
+
+  // La strada di WhatsApp: telefono valido e carrello vuoto. Non e' una
+  // vendita, quindi non le si chiedono i passaggi di una vendita.
+  if (telefonoValido && !ciSonoProdotti()) {
+    submitBtn.textContent = 'Invita su WhatsApp';
+    submitBtn.classList.add('invite', 'pronto');
+    submitBtn.disabled = false;
+    submitBtn.title = '';
+    return;
+  }
+
+  submitBtn.textContent = 'Registra Vendita';
+  var motivo = motivoNonRegistrabile();
+  if (motivo) {
+    submitBtn.disabled = true;
+    submitBtn.style.pointerEvents = 'none';
+    submitBtn.title = motivo;
+  } else {
+    submitBtn.disabled = false;
+    submitBtn.classList.add('pronto');
+    submitBtn.title = '';
+  }
 }
+
+/**
+ * Com'e' finita la vendita appena mandata. La chiama il sistema offline
+ * quando il motore risponde.
+ *
+ * Serve solo se quel pulsante sta ancora aspettando QUELLA vendita: se nel
+ * frattempo si e' gia' ricominciato a battere il cliente dopo, il rosso
+ * finirebbe sulla vendita sbagliata.
+ */
+function segnalaEsitoVendita(id, riuscita) {
+  var submitBtn = document.getElementById('btnRegistraVendita');
+  if (!submitBtn || submitBtn.dataset.venditaId !== String(id)) return;
+  if (riuscita) return;                       // il verde lo mette gia' invia()
+
+  delete submitBtn.dataset.inCorso;
+  delete submitBtn.dataset.venditaId;
+  submitBtn.textContent = 'NON registrata';
+  submitBtn.classList.remove('success', 'invite', 'pronto');
+  submitBtn.classList.add('error');
+  submitBtn.disabled = true;
+  submitBtn.style.pointerEvents = 'none';
+
+  // Resta rosso qualche secondo, poi il pulsante torna a dire la verita' su
+  // quello che c'e' a schermo adesso.
+  setTimeout(function () {
+    submitBtn.disabled = false;
+    aggiornaPulsanteDinamico();
+  }, 4000);
 }
 
 function invitaSoloWhatsApp() {
@@ -1836,11 +1923,14 @@ nomeEvento: sessionStorage.getItem('nomeEvento') || ''
 };
 
 submitBtn.textContent = "Salvando...";
-submitBtn.classList.remove('success', 'error', 'invite');
+submitBtn.classList.remove('success', 'error', 'invite', 'pronto');
 submitBtn.disabled = true;
 submitBtn.style.pointerEvents = 'none';
+// Da qui in poi il pulsante lo comanda questa funzione: aggiornaPulsanteDinamico
+// si tira indietro finche' la bandierina resta alzata.
+submitBtn.dataset.inCorso = '1';
 
-sistemaOffline.aggiungiVendita(dati);
+submitBtn.dataset.venditaId = String(sistemaOffline.aggiungiVendita(dati));
 
 // Invito Golosone su WhatsApp: aperto SUBITO nel gesto del click (non alla sincronizzazione),
 // così parte mentre il cliente è ancora al banco e senza pop-up multipli in ritardo.
@@ -1858,10 +1948,13 @@ mostraOverlaySuccesso(confezionati, sfuso);
 
 setTimeout(function() {
 resetForm();
-submitBtn.textContent = originalText;
+delete submitBtn.dataset.inCorso;
+delete submitBtn.dataset.venditaId;
 submitBtn.classList.remove('success');
 submitBtn.disabled = false;
-submitBtn.style.pointerEvents = 'auto';
+// Il testo e il colore non si rimettono a mano: li ricalcola il semaforo
+// guardando com'e' il banco adesso, che dopo il reset e' carrello vuoto.
+aggiornaPulsanteDinamico();
 window.scrollTo({ top: 0, behavior: 'smooth' });
 }, 2000);
 }, 500);
@@ -3145,6 +3238,10 @@ salvaReport();
   // sola prova che quei soldi sono arrivati davvero: senza, nel registro
   // resta scritto "Satispay" e nessuno puo' piu' controllare se e' vero.
   var riferimentoPagato = '';
+  // Il cliente ha inquadrato e poi ha detto di no, o e' uscito dall'app.
+  // Si tiene a parte invece di guardare il testo del messaggio: gli stati
+  // non si riconoscono dalle parole che capita di averci scritto sopra.
+  var annullatoDalCliente = false;
   var timer = null;             // il giro di domande al motore
   var timerTotale = null;       // l'attesa che il carrello si fermi
 
@@ -3200,6 +3297,15 @@ salvaReport();
       p.className = 'satispay-btn annulla';
       p.disabled = false;
       p.classList.remove('hidden');
+    } else if (stato === 'errore' && annullatoDalCliente) {
+      // Come la carta rifiutata su SumUp: una cosa sola che dice cos'e'
+      // successo E cosa fa se la premi. Prima «Pagamento annullato» stava
+      // in piccolo nella riga sotto e il pulsante diceva solo «Riprova»:
+      // due cose da mettere insieme con un cliente davanti.
+      p.textContent = 'Annullato — Riprova';
+      p.className = 'satispay-btn annulla pieno';
+      p.disabled = false;
+      p.classList.remove('hidden');
     } else if (stato === 'errore') {
       p.textContent = altruiInCorso ? 'Annulla il pagamento in corso' : 'Riprova';
       p.className = 'satispay-btn' + (altruiInCorso ? ' annulla' : '');
@@ -3214,8 +3320,10 @@ salvaReport();
       p.className = 'satispay-btn hidden';
     }
 
-    r.textContent = messaggio;
-    r.className = 'satispay-riga' + (stato === 'errore' ? ' rosso' : '');
+    // Se lo dice gia' il pulsante, qui sotto non si ripete.
+    r.textContent = annullatoDalCliente ? '' : messaggio;
+    r.className = 'satispay-riga' +
+      ((stato === 'errore' && !annullatoDalCliente) ? ' rosso' : '');
 
     // Il pulsante Satispay dice da solo com'e' andata: VERDE se il cliente
     // ha pagato, ROSSO se qualcosa non e' andato. Torna arancione appena si
@@ -3258,19 +3366,14 @@ salvaReport();
    * deve mai poter fermare la fila al banco.
    */
   function aggiornaPulsanteVendita() {
-    var p = pulsanteVendita();
-    if (!p) return;
-    var daBloccare = (metodoPagamentoSelezionato === 'Satispay' && stato === 'attesa');
-    if (daBloccare) {
-      p.disabled = true;
-      p.style.opacity = '0.5';
-      p.style.pointerEvents = 'none';
-    } else if (p.dataset.satispayBloccato === '1') {
-      p.disabled = false;
-      p.style.opacity = '';
-      p.style.pointerEvents = '';
-    }
-    p.dataset.satispayBloccato = daBloccare ? '1' : '0';
+    // Il pulsante «Registra Vendita» ha un padrone solo: la funzione del
+    // gestionale, che guarda TUTTE le condizioni insieme — carrello, metodo
+    // di pagamento, Satispay e SumUp. Qui ci si limita a svegliarla.
+    //
+    // Prima invece questo modulo lo spegneva da se' con l'opacita', e SumUp
+    // faceva lo stesso: due mani sullo stesso interruttore, ognuna che non
+    // sapeva cosa avesse deciso l'altra.
+    if (typeof aggiornaPulsanteDinamico === 'function') aggiornaPulsanteDinamico();
   }
 
   /* ─── il ciclo di attesa ───────────────────────────────────────── */
@@ -3305,9 +3408,14 @@ salvaReport();
 
       if (s.stato === 'scaduto' || s.stato === 'annullato' || s.stato === 'attesa') {
         stato = 'errore';
+        // «annullato» vuol dire che il CLIENTE ha detto di no nell'app, o e'
+        // uscito senza pagare. Non l'ha deciso nessuno al banco, quindi va
+        // detto forte: se sparisse in silenzio si resterebbe ad aspettare un
+        // pagamento che non arrivera' mai.
+        annullatoDalCliente = (s.stato === 'annullato');
         messaggio = (s.stato === 'scaduto')
           ? 'Il codice è scaduto: premi Riprova'
-          : 'Pagamento annullato';
+          : 'Pagamento annullato dal cliente';
         disegna();
         return;
       }
@@ -3343,6 +3451,7 @@ salvaReport();
     motore('satispayAvvia', [totale, cliente.trim()]).then(function (s) {
       if (!s || !s.success) {
         stato = 'errore';
+        annullatoDalCliente = false;
         altruiInCorso = !!(s && s.inCorso);
         messaggio = (s && s.errore) || 'Satispay non ha accettato la richiesta';
         disegna();
@@ -3350,6 +3459,7 @@ salvaReport();
       }
       altruiInCorso = false;
       riferimentoPagato = '';
+      annullatoDalCliente = false;
       stato = 'attesa';
       importo = s.importo;
       messaggio = 'QR sullo schermo del cliente — ' + euro(s.importo);
@@ -3446,9 +3556,25 @@ salvaReport();
   // Il pulsante è già spento, ma invia() lo richiede lo stesso: due
   // serrature sulla stessa porta, perché quella che conta è questa.
   function motivoBlocco() {
-    if (metodoPagamentoSelezionato === 'Satispay' && stato === 'attesa') {
+    if (metodoPagamentoSelezionato !== 'Satispay') return null;
+
+    if (stato === 'attesa') {
       return 'Il cliente non ha ancora confermato il pagamento di ' + euro(importo) + '.\n\n' +
              'Aspetta la conferma, oppure annulla il pagamento.';
+    }
+
+    // Il cliente ha inquadrato e ha detto di no. Quei soldi non sono
+    // arrivati, quindi registrare adesso vorrebbe dire scrivere «Satispay»
+    // su una vendita non pagata. Si esce da qui in due modi: riprovando, o
+    // scegliendo un altro metodo — che e' esattamente quello che si fa al
+    // banco quando uno cambia idea e tira fuori i contanti.
+    //
+    // Attenzione alla differenza: un GUASTO — rete giu', motore muto,
+    // codice scaduto — non blocca niente. Li' non sappiamo se ha pagato, e
+    // un difetto nostro non deve fermare la fila.
+    if (annullatoDalCliente) {
+      return 'Il cliente ha annullato il pagamento Satispay.\n\n' +
+             'Riprova, oppure scegli come ha pagato davvero.';
     }
     return null;
   }
@@ -3464,6 +3590,7 @@ salvaReport();
     importo = 0;
     messaggio = '';
     riferimentoPagato = '';
+    annullatoDalCliente = false;
     disegna();
     if (!daLiberare) return;
     // Un QR ancora vivo si annulla; un pagamento già incassato si libera
@@ -3498,6 +3625,7 @@ salvaReport();
             altruiInCorso = false;
             annulla(true);
           } else {
+            annullatoDalCliente = false;
             stato = 'fermo'; messaggio = ''; disegna(); chiedi();
           }
         }
@@ -3688,20 +3816,9 @@ salvaReport();
    * mai poter fermare la fila al banco.
    */
   function aggiornaPulsanteVendita() {
-    var p = pulsanteVendita();
-    if (!p) return;
-    var daBloccare = (metodoPagamentoSelezionato === 'SumUp' && stato === 'lettore');
-    if (daBloccare) {
-      p.disabled = true;
-      p.style.opacity = '0.5';
-      p.style.pointerEvents = 'none';
-      p.dataset.sumupBloccato = '1';
-    } else if (p.dataset.sumupBloccato === '1') {
-      p.disabled = false;
-      p.style.opacity = '';
-      p.style.pointerEvents = '';
-      delete p.dataset.sumupBloccato;
-    }
+    // Vedi il gemello nel modulo Satispay: il pulsante lo decide una
+    // funzione sola, qui la si sveglia e basta.
+    if (typeof aggiornaPulsanteDinamico === 'function') aggiornaPulsanteDinamico();
   }
 
   function chiedi() {
@@ -3958,6 +4075,13 @@ salvaReport();
     if (metodoPagamentoSelezionato === 'SumUp' && stato === 'lettore') {
       return 'Il cliente non ha ancora pagato ' + euro(importo) + ' sul lettore.\n\n' +
              'Aspetta la conferma, oppure annulla.';
+    }
+    // Carta rifiutata: come l'annullo su Satispay, quei soldi non sono
+    // arrivati. Si riprova o si cambia metodo. Un guasto del lettore invece
+    // non blocca: li' non sappiamo, e non sapere non deve fermare la fila.
+    if (metodoPagamentoSelezionato === 'SumUp' && cartaRifiutata) {
+      return 'La carta e\' stata rifiutata: il pagamento non e\' avvenuto.\n\n' +
+             'Riprova, oppure scegli come ha pagato davvero.';
     }
     if (lettoreNonFermato) {
       return 'Non so se il lettore si è fermato: il cliente potrebbe ancora pagare.\n\n' +

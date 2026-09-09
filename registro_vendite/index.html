@@ -732,19 +732,25 @@ cursor: pointer;
 transition: all 0.2s ease;
 }
 
-.submit-btn:hover:not(:disabled) {
-background: #333;
-transform: translateY(-1px);
-}
-
+/* Niente reazione al passaggio del mouse: questo pulsante e' un semaforo,
+   e un semaforo che cambia colore perche' gli passi vicino non serve a
+   niente. Al banco poi il mouse non c'e', c'e' un dito. */
 .submit-btn:active:not(:disabled) {
-transform: translateY(0);
+transform: translateY(1px);
 }
 
+/* SPENTO: manca ancora qualcosa. Prodotti, metodo di pagamento, oppure il
+   cliente non ha ancora confermato sul lettore o sul telefono. */
 .submit-btn:disabled {
 background: #999;
 cursor: not-allowed;
 transform: none;
+}
+
+/* VERDE: si puo' procedere. Tutti i passaggi fatti, oppure e' la strada di
+   WhatsApp. E' l'unico momento in cui il pulsante invita a premerlo. */
+.submit-btn.pronto:not(:disabled) {
+background: #28a745;
 }
 
 /* Submit Button Success State */
@@ -2129,7 +2135,7 @@ var CLIENT_ID = '177702047204-ihbchb4qd9ogcst7ocr6cj8rev4kie3u.apps.googleuserco
     // motore arrivi in un millisecondo o in cinque secondi.
     function aggancia() {
       var s = document.createElement('script');
-      s.src = 'app.js?v=16';
+      s.src = 'app.js?v=18';
       s.onerror = function () {
         overlay.style.display = 'flex';
         scrivi('Il gestionale non si e\' caricato. Controlla la connessione e ricarica.');
