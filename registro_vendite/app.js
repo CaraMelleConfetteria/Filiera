@@ -72,6 +72,12 @@ function commutaFiscalita() {
   var nuovo = !fiscalitaAttiva();
   try { localStorage.setItem(FISCALITA_CHIAVE, nuovo ? 'si' : 'no'); } catch (e) {}
   disegnaFiscalitaToggle();
+  // I due pagamenti elettronici seguono la bandierina: spenta, il gestionale
+  // non guida più né il lettore né il QR e la vendita non aspetta nessuna
+  // conferma; riaccesa, riparte da solo se un metodo è già scelto.
+  if (window.satispay && window.satispay.fiscalitaCambiata) window.satispay.fiscalitaCambiata();
+  if (window.sumup && window.sumup.fiscalitaCambiata) window.sumup.fiscalitaCambiata();
+  if (typeof aggiornaPulsanteDinamico === 'function') aggiornaPulsanteDinamico();
   // Nessuna notifica: la pillola cambia colore e scritta sotto il dito, dirlo
   // una seconda volta in una pillola gemella è solo rumore.
 }
@@ -3244,6 +3250,7 @@ salvaReport();
   var annullatoDalCliente = false;
   var timer = null;             // il giro di domande al motore
   var timerTotale = null;       // l'attesa che il carrello si fermi
+  var importoFisso = 0;         // la cifra per cui il QR fisso e' a schermo
 
   function motore(azione, args) {
     if (typeof window.__CHIAMA__ !== 'function') {
@@ -3491,9 +3498,62 @@ salvaReport();
       stato = (s && s.success) ? 'fermo' : 'errore';
       messaggio = (s && s.success) ? '' : ((s && s.errore) || 'Annullamento non riuscito');
       disegna();
+      // Fiscalità spenta mentre il QR era vivo: adesso che l'annullo è
+      // tornato si può mettere quello fisso al suo posto. Prima no — i due
+      // scriverebbero sullo schermo del cliente nell'ordine sbagliato.
+      if (stato === 'fermo' && !fiscalitaAccesa()) { importoFisso = 0; mostraFisso(); }
     }, function () {
       stato = 'errore';
       messaggio = 'Annullamento non riuscito: controlla lo schermo del cliente';
+      disegna();
+    });
+  }
+
+  /* ─── FISCALITÀ SPENTA ──────────────────────────────────────────
+     Il gestionale smette di guidare il pagamento: nessun pagamento creato
+     su Satispay, nessuna domanda sullo stato, nessuna vendita bloccata ad
+     aspettare una conferma che non arriverà. Al cliente si mostra il QR
+     FISSO del banco, e a dire se i soldi sono arrivati è chi sta in cassa.
+
+     Il typeof è voluto: i banchi di prova caricano il solo modulo, e senza
+     guardia partirebbe un ReferenceError come quello che il 5 settembre ha
+     buttato via diciotto vendite. Nel dubbio si risponde «accesa», cioè si
+     tengono tutte le protezioni. */
+  function fiscalitaAccesa() {
+    return (typeof fiscalitaAttiva === 'function') ? fiscalitaAttiva() : true;
+  }
+
+  function mostraFisso() {
+    var totale = totaleAschermo();
+
+    // Satispay lasciato, o carrello svuotato: lo schermo del cliente torna
+    // in attesa. Un QR dimenticato lì è un invito a pagare due volte.
+    if (metodoPagamentoSelezionato !== 'Satispay' || !(totale > 0)) {
+      if (importoFisso > 0) {
+        importoFisso = 0;
+        motore('satispayLibera', []).then(function () {}, function () {});
+      }
+      stato = 'fermo';
+      messaggio = '';
+      disegna();
+      return;
+    }
+
+    if (stato === 'fisso' && Math.abs(importoFisso - totale) < 0.005) return;
+
+    importoFisso = totale;
+    stato = 'fisso';
+    messaggio = 'Fiscalità spenta: QR fisso del banco sullo schermo del cliente — l\'incasso lo controlli tu';
+    disegna();
+    motore('satispayFisso', [totale]).then(function (esito) {
+      if (stato !== 'fisso') return;
+      if (esito && esito.success === false) {
+        messaggio = esito.errore || 'QR fisso non configurato';
+        disegna();
+      }
+    }, function () {
+      if (stato !== 'fisso') return;
+      messaggio = 'Motore non raggiungibile: usa il QR fisso di carta sul banco';
       disegna();
     });
   }
@@ -3508,6 +3568,8 @@ salvaReport();
    */
   function valuta() {
     if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+
+    if (!fiscalitaAccesa()) { mostraFisso(); return; }
 
     if (metodoPagamentoSelezionato !== 'Satispay') return;
     if (stato === 'pagato' || stato === 'chiedendo') return;
@@ -3544,6 +3606,7 @@ salvaReport();
       valuta();
     } else {
       if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+      if (stato === 'fisso') { mostraFisso(); return; }
       if (stato === 'attesa') annulla(false);
       else if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
       disegna();
@@ -3587,10 +3650,11 @@ salvaReport();
   function aRiposo() {
     ferma();
     if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
-    var daLiberare = (stato === 'pagato' || stato === 'attesa');
+    var daLiberare = (stato === 'pagato' || stato === 'attesa' || stato === 'fisso');
     var eraInAttesa = (stato === 'attesa');
     stato = 'fermo';
     importo = 0;
+    importoFisso = 0;
     messaggio = '';
     riferimentoPagato = '';
     annullatoDalCliente = false;
@@ -3637,8 +3701,31 @@ salvaReport();
     disegna();
   });
 
+  /**
+   * La bandierina della fiscalità è stata girata.
+   *
+   * Spegnendola con un QR vivo a schermo, quel QR si annulla PRIMA: è un
+   * pagamento vero, e lasciarlo acceso dopo che il gestionale ha smesso di
+   * guardarlo vorrebbe dire incassare senza accorgersene. Il QR fisso ci va
+   * al suo posto quando l'annullo è tornato, non un istante prima.
+   */
+  function fiscalitaCambiata() {
+    if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+
+    if (!fiscalitaAccesa()) {
+      if (stato === 'attesa') { annulla(false); return; }   // il resto lo fa l'annullo
+      if (stato === 'errore' || stato === 'pagato') { stato = 'fermo'; messaggio = ''; }
+      mostraFisso();
+      return;
+    }
+
+    if (stato === 'fisso') { stato = 'fermo'; messaggio = ''; importoFisso = 0; }
+    valuta();
+  }
+
   window.satispay = {
     cambiaMetodo: cambiaMetodo,
+    fiscalitaCambiata: fiscalitaCambiata,
     totaleCambiato: totaleCambiato,
     motivoBlocco: motivoBlocco,
     riferimento: function () { return (stato === 'pagato') ? riferimentoPagato : ''; },
@@ -3979,6 +4066,9 @@ salvaReport();
         togglePagamento('SumUp');
         return;
       }
+      // Fiscalità spenta mentre la cifra era sul lettore: il lettore adesso
+      // è fermo, e da qui in poi l'importo lo batte la cassiera.
+      if (!fiscalitaAccesa()) { manuale(); return; }
       disegna();
 
     }, function () {
@@ -4024,8 +4114,33 @@ salvaReport();
   }
 
   /** Che cosa deve avere il lettore, adesso. */
+  /* ─── FISCALITÀ SPENTA ──────────────────────────────────────────
+     Il collegamento col lettore si spegne: nessuna cifra mandata al Solo,
+     nessuna domanda a SumUp, nessuna vendita bloccata ad aspettare una
+     conferma. L'importo lo batte la cassiera sul lettore e guarda lei se
+     è passato, esattamente come si faceva prima del gestionale.
+
+     Il typeof è voluto: i banchi di prova caricano il solo modulo, e senza
+     guardia partirebbe un ReferenceError. Nel dubbio si risponde «accesa»,
+     cioè si tengono tutte le protezioni. */
+  function fiscalitaAccesa() {
+    return (typeof fiscalitaAttiva === 'function') ? fiscalitaAttiva() : true;
+  }
+
+  function manuale() {
+    if (metodoPagamentoSelezionato !== 'SumUp') {
+      if (stato === 'manuale') { stato = 'fermo'; messaggio = ''; disegna(); }
+      return;
+    }
+    stato = 'manuale';
+    messaggio = 'Fiscalità spenta: l\'importo lo batti tu sul lettore';
+    disegna();
+  }
+
   function valuta() {
     if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+
+    if (!fiscalitaAccesa()) { manuale(); return; }
 
     if (metodoPagamentoSelezionato !== 'SumUp') return;
     if (stato === 'pagato' || stato === 'chiedendo') return;
@@ -4057,6 +4172,7 @@ salvaReport();
       valuta();
     } else {
       if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+      if (stato === 'manuale') { stato = 'fermo'; messaggio = ''; disegna(); return; }
       if (stato === 'lettore') annulla(false, false);
       // Un errore qualunque si dimentica lasciando SumUp; il dubbio sul
       // lettore no — quello lo si toglie solo guardandolo.
@@ -4148,8 +4264,34 @@ salvaReport();
     disegna();
   });
 
+  /**
+   * La bandierina della fiscalità è stata girata.
+   *
+   * Spegnendola con la cifra sul lettore, la cifra si toglie PRIMA: il
+   * cliente ce l'ha davanti e potrebbe infilare la carta mentre il
+   * gestionale ha già smesso di guardare. Se il lettore non si ferma resta
+   * il dubbio, e il dubbio blocca la vendita anche a fiscalità spenta —
+   * quello non è un adempimento, è non incassare due volte.
+   */
+  function fiscalitaCambiata() {
+    if (timerTotale) { clearTimeout(timerTotale); timerTotale = null; }
+
+    if (!fiscalitaAccesa()) {
+      if (stato === 'lettore') { annulla(false, false); return; }   // il resto lo fa l'annullo
+      if ((stato === 'errore' && !lettoreNonFermato) || stato === 'pagato') {
+        stato = 'fermo'; messaggio = '';
+      }
+      manuale();
+      return;
+    }
+
+    if (stato === 'manuale') { stato = 'fermo'; messaggio = ''; }
+    valuta();
+  }
+
   window.sumup = {
     cambiaMetodo: cambiaMetodo,
+    fiscalitaCambiata: fiscalitaCambiata,
     totaleCambiato: totaleCambiato,
     motivoBlocco: motivoBlocco,
     riferimento: function () { return (stato === 'pagato') ? riferimentoPagato : ''; },
