@@ -363,6 +363,21 @@ if (risposta && risposta.stampa && window.stampante) {
   try { window.stampante.stampa(risposta.stampa); } catch (e) { console.error('Stampa scontrino:', e); }
 }
 
+// LA CODA DI LAVORO DELLO SCONTRINO: archiviare il PDF su Drive e posare nel
+// registro il numero e il link. Roba utile, ma DOPO — e infatti parte qui,
+// quando la carta è già uscita e il cliente se n'è andato. Aspettarla
+// costava al banco un giro completo a Datacash e sei giri sul Foglio.
+//
+// Non si aspetta la risposta e non si avvisa nessuno se va storta: lo
+// scontrino fiscale è già emesso e all'Agenzia è già arrivato. Quello che si
+// perde, nel caso, sono due celle di comodità che si riprendono da Datacash.
+if (risposta && risposta.daCompletare && typeof window.__CHIAMA__ === 'function') {
+  try {
+    window.__CHIAMA__('scontrinoCompleta', [risposta.daCompletare])
+      .then(function () {}, function (e) { console.error('Coda scontrino:', e); });
+  } catch (e) { console.error('Coda scontrino:', e); }
+}
+
 // AVVISO PREZZI: il totale mostrato non coincide con quello registrato dal server.
 if (risposta && risposta.avvisoPrezzi) {
 console.error('Divergenza prezzi:', risposta.avvisoPrezzi);
