@@ -2236,6 +2236,42 @@ sistemaOffline.mostraNotifica(
 'success'
 );
 
+// IL CONFRONTO CON L'INCASSATO VERO.
+//
+// Non va in una pillola: una pillola se ne va da sola dopo quattro secondi
+// e questa e' l'unica occasione della giornata in cui si scopre che un
+// incasso non e' stato registrato. Se la si perde, la si perde per sempre —
+// domani quelle transazioni saranno in mezzo a quelle di domani.
+//
+// Compare SOLO quando c'e' qualcosa da dire: se i conti tornano, chiudere
+// la giornata resta un gesto solo, com'e' sempre stato.
+try {
+  var _ric = result.data && result.data.riconciliazione;
+  if (_ric && (_ric.avvisi || []).length) {
+    var _t = [];
+    _t.push('FINE GIORNATA — I CONTI NON TORNANO');
+    _t.push('');
+    _t.push('Registrato:          € ' + result.data.lordo.toFixed(2));
+    if (!_ric.incerta) {
+      _t.push('Incassato davvero:   € ' + _ric.incassato.toFixed(2));
+      _t.push('Differenza:          € ' + _ric.differenza.toFixed(2));
+    }
+    _t.push('');
+    _ric.avvisi.forEach(function (a) { _t.push('  • ' + a); });
+    _t.push('');
+    if (_ric.incerta) {
+      // «Non lo so» non e' «tutto a posto»: se un conto non ha risposto, il
+      // silenzio sugli altri non dimostra niente.
+      _t.push('Un conto non ha risposto: il confronto e\' incompleto,');
+      _t.push('rilancialo piu\' tardi dall\'editor.');
+    } else {
+      _t.push('Il report e\' gia\' salvato. Queste righe restano nel foglio,');
+      _t.push('nella colonna «Da controllare».');
+    }
+    alert(_t.join('\n'));
+  }
+} catch (e) { console.error('Riepilogo riconciliazione:', e); }
+
 resetForm();
 document.getElementById('paginaGestionale').classList.add('hidden');
 document.getElementById('selezioneProdotti').classList.add('hidden');
