@@ -1611,6 +1611,15 @@ avvisaProdottiMancanti();
 return;
 }
 
+// Cambiare metodo con un incasso gia' ricevuto vuol dire dichiarare che ha
+// pagato in un altro modo, e i soldi arrivati restano senza vendita. Si
+// chiede. Non vale per il metodo che ha appena incassato: rideselezionarlo
+// e' il gesto normale per annullare, e lo gestisce il modulo.
+if (metodoPagamentoSelezionato !== metodo &&
+    !confermaPerditaIncasso('Stai scegliendo un altro metodo di pagamento')) {
+  return;
+}
+
 var btnId = 'btn' + metodo.replace(' ', '');
 var button = document.getElementById(btnId);
 
@@ -1701,6 +1710,107 @@ function motivoNonRegistrabile() {
   if (attesa) return attesa;
 
   return null;
+}
+
+/**
+ * C'e' un incasso elettronico gia' confermato in questo momento?
+ *
+ * Nasce dai quattro giorni di Terra Madre, dove 72 euro sono stati incassati
+ * e mai registrati. In due casi su quattro il cliente aveva pagato, il tasto
+ * era VERDE, e la vendita e' sparita lo stesso: una volta perche' si e'
+ * passati al cliente dopo, una perche' la pagina si e' ricaricata.
+ *
+ * Il gestionale lo sapeva e non ha detto niente. Da qui in poi lo dice.
+ *
+ * @return {string} metodo e cifra incassati, oppure '' se non c'e' niente
+ */
+function incassoDaNonPerdere() {
+  var quale = null;
+  try {
+    if (window.satispay && window.satispay.stato() === 'pagato') quale = 'Satispay';
+    else if (window.sumup && window.sumup.stato() === 'pagato')  quale = 'SumUp';
+  } catch (e) { return ''; }
+  if (!quale) return '';
+
+  var el = document.getElementById('totale');
+  var tot = el ? el.textContent.trim() : '';
+  return quale + (tot ? ' ' + tot : '');
+}
+
+/* ─── IL PROMEMORIA CHE SOPRAVVIVE AL TABLET SPENTO ─────────────────
+   L'avviso prima di lasciare la pagina copre chi ricarica o chiude. NON
+   copre il tablet che si spegne, il browser che si chiude da solo, la
+   batteria che finisce: li' non gira nessun codice.
+
+   Quindi appena un incasso viene confermato se ne lascia nota qui, e la
+   nota si cancella solo quando la vendita e' entrata in coda — da quel
+   momento e' al sicuro, perche' anche la coda vive in localStorage.
+
+   Se alla riapertura la nota c'e' ancora, vuol dire che fra il pagamento e
+   la registrazione e' successo qualcosa. Lo si dice, con metodo, importo e
+   ora, in modo che quella vendita si possa rifare subito invece di
+   scoprirla un mese dopo incrociando gli estratti. */
+var INCASSO_SOSPESO = 'caramelle_incasso_sospeso';
+
+function segnaIncassoRicevuto(metodo, importo) {
+  try {
+    localStorage.setItem(INCASSO_SOSPESO, JSON.stringify({
+      metodo: metodo, importo: importo, quando: new Date().toISOString()
+    }));
+  } catch (e) {}
+}
+
+function incassoSospesoChiuso() {
+  try { localStorage.removeItem(INCASSO_SOSPESO); } catch (e) {}
+}
+
+function avvisaIncassoRimastoSospeso() {
+  var n = null;
+  try { n = JSON.parse(localStorage.getItem(INCASSO_SOSPESO) || 'null'); } catch (e) {}
+  if (!n || !n.metodo) return;
+  // Si avvisa UNA volta sola: un avviso che ricompare a ogni apertura si
+  // impara a chiudere senza leggerlo, ed e' peggio che non averlo.
+  incassoSospesoChiuso();
+
+  var q = '';
+  try {
+    var d = new Date(n.quando);
+    q = d.toLocaleDateString('it-IT') + ' alle ' + d.toLocaleTimeString('it-IT').substring(0, 5);
+  } catch (e) {}
+
+  try {
+    alert('INCASSO RIMASTO IN SOSPESO\n\n' +
+          'Un pagamento ' + n.metodo + ' di ' +
+          (Number(n.importo) || 0).toFixed(2).replace('.', ',') + ' €' +
+          (q ? ' del ' + q : '') + ' era stato confermato,\n' +
+          'ma la vendita non risulta registrata.\n\n' +
+          'Controlla nel registro: se non c\'è, va rifatta.');
+  } catch (e) {}
+}
+
+/**
+ * «Stai per perdere un incasso: sicuro?» — e se non lo sei, non si fa.
+ *
+ * Si chiama dove il carrello sta per sparire: cambiando metodo di pagamento,
+ * svuotando il carrello, ricominciando da capo. Non blocca niente di per se':
+ * chiede, e chi sta al banco decide. Ma un incasso confermato non se ne va
+ * piu' in silenzio, che e' esattamente come se ne sono andati i 72 euro.
+ *
+ * @return {boolean} true = si puo' procedere
+ */
+function confermaPerditaIncasso(cosaSuccede) {
+  var incasso = incassoDaNonPerdere();
+  if (!incasso) return true;
+  try {
+    return confirm('ATTENZIONE — INCASSO GIÀ RICEVUTO\n\n' +
+                   'Il cliente ha già pagato: ' + incasso + '.\n' +
+                   (cosaSuccede || 'Stai per perdere questa vendita') + '.\n\n' +
+                   'Se continui, quei soldi restano incassati ma la vendita\n' +
+                   'NON viene registrata e non esce nessuno scontrino.\n\n' +
+                   'Continuare lo stesso?');
+  } catch (e) {
+    return true;   // senza confirm non si blocca il banco
+  }
 }
 
 /**
@@ -1952,6 +2062,9 @@ submitBtn.style.pointerEvents = 'none';
 submitBtn.dataset.inCorso = '1';
 
 submitBtn.dataset.venditaId = String(sistemaOffline.aggiungiVendita(dati));
+// Da qui la vendita e' in coda, e la coda vive in localStorage: anche se il
+// tablet si spegne adesso, non si perde. Il promemoria ha finito.
+incassoSospesoChiuso();
 
 // Invito Golosone su WhatsApp: aperto SUBITO nel gesto del click (non alla sincronizzazione),
 // così parte mentre il cliente è ancora al banco e senza pop-up multipli in ritardo.
@@ -2141,11 +2254,40 @@ attributeFilter: ['class']
 setTimeout(toggleFineButton, 100);
 });
 
+/* L'avviso del browser prima di lasciare la pagina.
+   C'era gia', generico. Adesso sa distinguere: se c'e' un incasso
+   confermato, l'avviso scatta SEMPRE — anche subito dopo un clic, che era
+   la finestra in cui prima non proteggeva niente (lo si toglieva a ogni
+   clic e lo si rimetteva dopo 100 ms).
+
+   E' cosi' che il 24 settembre sono spariti 7 euro: il cliente aveva
+   pagato sul lettore, il tasto era verde, e la pagina si e' ricaricata
+   prima che qualcuno premesse Registra Vendita. Il carrello vive solo
+   nella memoria della pagina: non era ancora una vendita, era roba a
+   schermo. */
 var protezioneRefresh = function(e) {
 e.preventDefault();
 e.returnValue = '';
 return '';
 };
+
+// All'apertura: se l'ultima volta era rimasto un incasso senza vendita, lo
+// si dice adesso. Copre il caso che nessun avviso puo' coprire — il tablet
+// spento, la batteria finita, il browser chiuso di colpo.
+setTimeout(function () {
+  try { avvisaIncassoRimastoSospeso(); } catch (e) {}
+}, 2500);
+
+// Questo non si toglie mai, e non dipende dai clic: se c'e' un incasso in
+// ballo, uscire dalla pagina deve costare una domanda.
+window.addEventListener('beforeunload', function (e) {
+  try {
+    if (!incassoDaNonPerdere()) return;
+  } catch (err) { return; }
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
 
 window.addEventListener('beforeunload', protezioneRefresh);
 
@@ -3302,6 +3444,9 @@ salvaReport();
   var timer = null;             // il giro di domande al motore
   var timerTotale = null;       // l'attesa che il carrello si fermi
   var importoFisso = 0;         // la cifra per cui il QR fisso e' a schermo
+  var pagatoColCartoncino = false;   // ha pagato il cartoncino, non lo schermo
+  var timerCartoncino = null;        // il giro che cerca il pagamento col cartoncino
+  var daQuandoCartoncino = 0;        // da che momento cercarlo
 
   function motore(azione, args) {
     if (typeof window.__CHIAMA__ !== 'function') {
@@ -3377,8 +3522,13 @@ salvaReport();
       p.className = 'satispay-btn hidden';
     }
 
-    // Se lo dice gia' il pulsante, qui sotto non si ripete.
+    // Se lo dice gia' il pulsante, qui sotto non si ripete. L'unica cosa
+    // che il verde non puo' dire e' COME ha pagato: col cartoncino il
+    // cliente ha gia' finito e non sta piu' guardando lo schermo.
     var testoRiga = annullatoDalCliente ? '' : messaggio;
+    if (stato === 'pagato' && pagatoColCartoncino) {
+      testoRiga = 'Pagato col QR del banco';
+    }
     r.textContent = testoRiga;
     r.className = 'satispay-riga' +
       ((stato === 'errore' && !annullatoDalCliente) ? ' rosso' : '');
@@ -3444,6 +3594,37 @@ salvaReport();
 
   function ferma() {
     if (timer) { clearTimeout(timer); timer = null; }
+    if (timerCartoncino) { clearTimeout(timerCartoncino); timerCartoncino = null; }
+  }
+
+  /**
+   * Col cartoncino il gestionale non riceve nessuna conferma: deve andarsela
+   * a cercare. Si guarda sul conto se e' arrivato un pagamento di questo
+   * importo dopo che si e' cominciato ad aspettare.
+   *
+   * Ogni tre secondi, e solo finche' si e' in 'manuale': se al banco si
+   * cambia metodo o si registra, il giro finisce da se'.
+   */
+  function cercaCartoncino() {
+    if (timerCartoncino) { clearTimeout(timerCartoncino); timerCartoncino = null; }
+    if (stato !== 'manuale' || metodoPagamentoSelezionato !== 'Satispay') return;
+
+    motore('satispayCartoncino', [importo, daQuandoCartoncino]).then(function (r) {
+      if (stato !== 'manuale') return;
+      if (r && r.success && r.pagato) {
+        stato = 'pagato';
+        riferimentoPagato = r.id || '';
+        pagatoColCartoncino = true;
+        segnaIncassoRicevuto('Satispay', importo);
+        messaggio = '';
+        disegna();
+        return;
+      }
+      timerCartoncino = setTimeout(cercaCartoncino, 3000);
+    }, function () {
+      if (stato !== 'manuale') return;
+      timerCartoncino = setTimeout(cercaCartoncino, 5000);
+    });
   }
 
   function guarda() {
@@ -3462,6 +3643,11 @@ salvaReport();
         stato = 'pagato';
         importo = s.importo;
         riferimentoPagato = s.id || '';
+        segnaIncassoRicevuto('Satispay', s.importo);
+        // Pagato col cartoncino invece che con lo schermo: la riga sotto lo
+        // dice, perche' al banco cambia una cosa — il cliente non sta piu'
+        // guardando il monitor, ha gia' finito.
+        pagatoColCartoncino = !!s.cartoncino;
         // Nessuna frase: lo dice il pulsante Satispay diventando verde.
         // Una riga di testo in piu' e' una cosa da leggere proprio nel
         // momento in cui si ha il cliente davanti e le mani occupate.
@@ -3524,8 +3710,13 @@ salvaReport();
         if (s && s.schermoSpento) {
           altruiInCorso = false;
           stato = 'manuale';
-          messaggio = s.errore || 'Schermo del cliente spento: usa il cartellino sul banco.';
+          // Da quando cercare il pagamento: adesso. Il cliente sta per
+          // inquadrare il cartoncino, non l'ha fatto un'ora fa.
+          daQuandoCartoncino = Date.now();
+          importo = totaleAschermo();
+          messaggio = s.errore || 'Schermo spento: fai inquadrare il cartellino sul banco.';
           disegna();
+          cercaCartoncino();
           return;
         }
         stato = 'errore';
@@ -3537,6 +3728,7 @@ salvaReport();
       altruiInCorso = false;
       riferimentoPagato = '';
       annullatoDalCliente = false;
+      pagatoColCartoncino = false;
       stato = 'attesa';
       importo = s.importo;
       // Che il QR sia a schermo lo si vede: e' sullo schermo. La riga dice
@@ -3703,9 +3895,47 @@ salvaReport();
   function motivoBlocco() {
     if (metodoPagamentoSelezionato !== 'Satispay') return null;
 
+    /* Il QR non e' ancora comparso. Dura un attimo, ma in quell'attimo il
+       tasto era VERDE: si poteva registrare una vendita Satispay che
+       nessuno aveva ancora avuto modo di pagare. */
+    if (stato === 'chiedendo') {
+      return 'Sto ancora preparando il QR.\n\nAspetta che compaia sullo schermo del cliente.';
+    }
+
+    /* Schermo del cliente spento, fiscalita' accesa: si incassa col
+       cartoncino sul banco. Prima qui il tasto era verde dal primo istante
+       — la vendita si registrava senza che nessuno avesse verificato
+       niente, ed e' uno dei modi in cui a Terra Madre sono passati incassi
+       senza vendita e vendite senza incasso.
+       Non si resta bloccati: il gestionale cerca il pagamento sul conto e
+       si sblocca da solo appena lo trova. */
+    if (stato === 'manuale') {
+      return 'Il cliente non ha ancora pagato ' + euro(importo) + ' col QR del banco.\n\n' +
+             'Aspetta: appena il pagamento arriva il tasto diventa verde.\n' +
+             'Se ha pagato in un altro modo, scegli quel metodo.';
+    }
+
     if (stato === 'attesa') {
       return 'Il cliente non ha ancora confermato il pagamento di ' + euro(importo) + '.\n\n' +
              'Aspetta la conferma, oppure annulla il pagamento.';
+    }
+
+    /* Il carrello e' cambiato DOPO che il cliente aveva pagato.
+       E' il caso «passo al cliente dopo»: si battono i prodotti nuovi sopra
+       i vecchi senza registrare quelli. Prima il tasto restava verde e il
+       riferimento del pagamento vecchio restava attaccato — cosi' la vendita
+       precedente spariva e quella nuova risultava pagata con soldi che erano
+       di un altro. E' il modo in cui il 24 settembre sono spariti 21 euro.
+
+       Le due vie d'uscita le dice il messaggio: o si tolgono i prodotti
+       aggiunti e si registra la vendita pagata, oppure si sceglie un altro
+       metodo — e li' scatta la domanda che avvisa che quell'incasso resta
+       senza vendita. */
+    if (stato === 'pagato' && Math.abs(totaleAschermo() - importo) > 0.005) {
+      return 'Il cliente ha pagato ' + euro(importo) + ', ma il totale adesso è ' +
+             euro(totaleAschermo()) + '.\n\n' +
+             'Togli i prodotti aggiunti e registra la vendita pagata,\n' +
+             'oppure scegli un altro metodo di pagamento.';
     }
 
     // Il cliente ha inquadrato e ha detto di no. Quei soldi non sono
@@ -3737,6 +3967,7 @@ salvaReport();
     messaggio = '';
     riferimentoPagato = '';
     annullatoDalCliente = false;
+    pagatoColCartoncino = false;
     disegna();
     if (!daLiberare) return;
     // Un QR ancora vivo si annulla; un pagamento già incassato si libera
@@ -4058,6 +4289,7 @@ salvaReport();
         stato = 'pagato';
         importo = s.importo;
         riferimentoPagato = s.riferimento || '';
+        segnaIncassoRicevuto('SumUp', s.importo);
         // Nessuna frase: lo dice il pulsante SumUp diventando verde.
         messaggio = '';
         disegna();
@@ -4282,6 +4514,16 @@ salvaReport();
     if (metodoPagamentoSelezionato === 'SumUp' && stato === 'lettore') {
       return 'Il cliente non ha ancora pagato ' + euro(importo) + ' sul lettore.\n\n' +
              'Aspetta la conferma, oppure annulla.';
+    }
+
+    // Come su Satispay: il carrello cambiato dopo l'incasso vuol dire che la
+    // vendita pagata sta per sparire sotto quella nuova.
+    if (metodoPagamentoSelezionato === 'SumUp' && stato === 'pagato' &&
+        Math.abs(totaleAschermo() - importo) > 0.005) {
+      return 'Il cliente ha pagato ' + euro(importo) + ' sul lettore, ma il totale adesso è ' +
+             euro(totaleAschermo()) + '.\n\n' +
+             'Togli i prodotti aggiunti e registra la vendita pagata,\n' +
+             'oppure scegli un altro metodo di pagamento.';
     }
     // Carta rifiutata: come l'annullo su Satispay, quei soldi non sono
     // arrivati. Si riprova o si cambia metodo. Un guasto del lettore invece
