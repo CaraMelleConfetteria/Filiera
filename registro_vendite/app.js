@@ -60,12 +60,27 @@ function disegnaFiscalitaToggle() {
    sia partita.
    La spedizione invece RESTA: quella non è un dato della fattura, entra nei
    totali del registro e va battuta comunque. */
+/* Sui Negozi la colonna «Metodo Pagamento» del registro non la decidono i tre
+   tasti della cassa — quelli sono nascosti — ma la fattura. Tenerle allineate
+   e' tutto il punto: se il documento dice «pagata in contanti alla consegna» e
+   il registro dice «Bonifico», fra sei mesi nessuno sa quale delle due e'
+   vera. Nessuno dei due valori paga commissioni. */
+function metodoRegistroNegozio() {
+  return (typeof metodoFatturaScelto === 'function' &&
+          metodoFatturaScelto() === 'contanti') ? 'Contanti' : 'Bonifico';
+}
+
 function aggiornaCampiFattura() {
   var acceso = fiscalitaAttiva();
   var riga = document.getElementById('rigaNumeroFattura');
   if (riga) riga.style.display = acceso ? 'flex' : 'none';
+  // La scadenza serve solo se un bonifico ci sara' davvero: senza fattura
+  // (fiscalita' spenta) o con la merce gia' saldata in contanti, lasciarla
+  // li' selezionata fa credere che qualcuno debba ancora pagare.
+  var contanti = typeof metodoFatturaScelto === 'function' &&
+                 metodoFatturaScelto() === 'contanti';
   var scad = document.getElementById('bloccoScadenza');
-  if (scad) scad.style.display = acceso ? 'block' : 'none';
+  if (scad) scad.style.display = (acceso && !contanti) ? 'block' : 'none';
 }
 
 function commutaFiscalita() {
@@ -835,15 +850,24 @@ function preparaSchermataVendita() {
   document.getElementById("datiNegozio").style.display = tipoVendita === "Negozi" ? "block" : "none";
   document.getElementById("cliente").placeholder = tipoVendita === "Negozi"
     ? "Nome del negozio" : "Nome / Cognome (opzionale)";
-  // Sui Negozi il metodo non si sceglie: si paga a bonifico, immediato o a
-  // termine. Lo si fissa invece di nasconderlo e basta, così la colonna
-  // "Metodo Pagamento" del registro resta vera invece di restare vuota.
-  // Bonifico non è nella tabella commissioni, quindi la commissione è 0.
+  // Sui Negozi il metodo non si sceglie coi tasti della cassa: lo si prende
+  // dalla fattura (bonifico, oppure contanti alla consegna). Lo si fissa
+  // invece di nasconderlo e basta, così la colonna "Metodo Pagamento" del
+  // registro resta vera invece di restare vuota. Né Bonifico né Contanti
+  // sono nella tabella commissioni, quindi la commissione è 0.
   var gruppo = document.getElementById("gruppoPagamento");
   if (gruppo) gruppo.style.display = tipoVendita === "Negozi" ? "none" : "block";
   if (tipoVendita === "Negozi") {
-    metodoPagamentoSelezionato = "Bonifico";
+    metodoPagamentoSelezionato = metodoRegistroNegozio();
     document.getElementById("sezioneContanti").style.display = "none";
+  } else {
+    /* Sui Privati il metodo lo deve scegliere chi sta in cassa, e si parte da
+       niente. Prima qui non si azzerava: tornando da una vendita Horeca il
+       metodo restava "Bonifico" e il tasto era verde senza che nessuno avesse
+       toccato un pagamento. Con la scelta nuova sarebbe potuto restare
+       "Contanti", che e' peggio — si apriva anche il calcolo del resto, su un
+       metodo che nessuno aveva scelto. */
+    metodoPagamentoSelezionato = null;
   }
 
   if (tipoVendita === "Negozi") { caricaElencoNegozi(); caricaNumeroSuggerito(); }
@@ -1117,7 +1141,7 @@ item.classList.remove("selected");
 aggiornaTotali();
 calcolaResto();
 
-metodoPagamentoSelezionato = tipoVendita === "Negozi" ? "Bonifico" : null;
+metodoPagamentoSelezionato = tipoVendita === "Negozi" ? metodoRegistroNegozio() : null;
 document.getElementById("btnContanti").classList.remove('selected');
 document.getElementById("btnSatispay").classList.remove('selected');
 document.getElementById("btnSumUp").classList.remove('selected');
@@ -1650,7 +1674,10 @@ function toggleCalcoloResto() {
 var sezioneContanti = document.getElementById("sezioneContanti");
 var banconotaInput = document.getElementById("banconota");
 
-if (metodoPagamentoSelezionato === 'Contanti') {
+// Sui Negozi "Contanti" vuol dire «la fattura e' gia' saldata», non «c'e'
+// un cliente al banco che aspetta il resto»: il riquadro resta chiuso,
+// come e' sempre stato quando il metodo era fisso a Bonifico.
+if (metodoPagamentoSelezionato === 'Contanti' && tipoVendita !== "Negozi") {
 sezioneContanti.style.display = "block";
 } else {
 sezioneContanti.style.display = "none";
@@ -2028,6 +2055,7 @@ cliente: cliente,
 negozio: (tipoVendita === "Negozi" ? datiNegozioCorrente() : null),
 numeroFattura: (tipoVendita === "Negozi" ? numeroFatturaScelto() : null),
 giorniPagamento: (tipoVendita === "Negozi" ? giorniPagamentoScelti() : null),
+metodoFattura: (tipoVendita === "Negozi" ? metodoFatturaScelto() : null),
 speseSpedizione: (tipoVendita === "Negozi" ? spedizioneScelta().imponibile : 0),
 telefono: telefono,
 condividiWhatsapp: condividiWhatsapp,
@@ -2615,19 +2643,47 @@ salvaReport();
      Le caselle stanno dentro #datiNegozio, quindi si vedono solo sui
      Negozi. Riusano le classi dei metodi di pagamento: stesso aspetto,
      nessun CSS nuovo. */
+  /* Il filtro [data-giorni] non e' pignoleria: dentro #datiNegozio adesso ci
+     sono DUE gruppi di caselle con le stesse classi, e ognuno ha la sua
+     selezionata. Senza il filtro questa funzione pescava la prima che
+     capitava — cioe' il metodo — e leggeva un data-giorni che non c'e':
+     NaN al posto dei giorni, scadenza sbagliata in fattura. */
   window.giorniPagamentoScelti = function () {
-    var sel = document.querySelector('#datiNegozio .payment-button.selected');
+    var sel = document.querySelector('#datiNegozio .payment-button[data-giorni].selected');
     return sel ? parseInt(sel.getAttribute('data-giorni'), 10) : 0;
   };
 
-  function collegaScadenze() {
-    var caselle = document.querySelectorAll('#datiNegozio .payment-button[data-giorni]');
+  /* ── METODO DI PAGAMENTO DELLA FATTURA ──
+     Non e' il metodo con cui incassa la cassa (quello e' contanti/Satispay/
+     SumUp, e per i Negozi non si usa): e' come il negozio salda la fornitura.
+     Decide MP01 o MP05 sull'XML, e sul PDF la riga del pagamento. */
+  window.metodoFatturaScelto = function () {
+    var sel = document.querySelector('#datiNegozio .payment-button[data-metodo].selected');
+    return sel ? sel.getAttribute('data-metodo') : 'bonifico';
+  };
+
+  function collegaGruppo(selettore, dopo) {
+    var caselle = document.querySelectorAll(selettore);
     for (var i = 0; i < caselle.length; i++) {
       caselle[i].addEventListener('click', function () {
         for (var j = 0; j < caselle.length; j++) caselle[j].classList.remove('selected');
         this.classList.add('selected');
+        if (dopo) dopo();
       });
     }
+  }
+
+  function collegaScadenze() {
+    collegaGruppo('#datiNegozio .payment-button[data-giorni]');
+    // Scelti i contanti, la scadenza non ha piu' senso e sparisce: la
+    // decide aggiornaCampiFattura, che e' l'unica a muovere quel blocco.
+    collegaGruppo('#datiNegozio .payment-button[data-metodo]', function () {
+      if (typeof tipoVendita !== 'undefined' && tipoVendita === 'Negozi') {
+        metodoPagamentoSelezionato = metodoRegistroNegozio();
+      }
+      if (typeof aggiornaCampiFattura === 'function') aggiornaCampiFattura();
+      if (typeof aggiornaPulsanteDinamico === 'function') aggiornaPulsanteDinamico();
+    });
   }
 
   /* ── NUMERO FATTURA ──

@@ -1662,6 +1662,17 @@ Continua con i prodotti selezionati
     <span id="numeroFatturaNota" style="font-size:13px;color:#777"></span>
   </div>
 
+  <!-- Come paga il negozio. Sta FUORI dal blocco della scadenza perché vale
+       anche a fiscalità spenta: il foglio di consegna porta lo stesso piede
+       della fattura, e su merce già saldata non deve chiedere un bonifico.
+       Scegliendo «Contanti» la scadenza sparisce — non c'è più niente da far
+       scadere — e con lei spariscono dal documento IBAN e nota sulla delega. -->
+  <label style="display:block;margin-bottom:8px">Pagamento del negozio</label>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px">
+    <button type="button" class="payment-button selected" data-metodo="bonifico"><span class="payment-name">Bonifico</span></button>
+    <button type="button" class="payment-button" data-metodo="contanti"><span class="payment-name">Contanti</span></button>
+  </div>
+
   <!-- Scadenza del bonifico: quattro caselle, come i metodi di pagamento.
        Vale per questa fattura; il predefinito è immediata. Etichetta e caselle
        stanno in un contenitore unico perché a fiscalità spenta spariscono
