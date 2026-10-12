@@ -334,19 +334,26 @@
   <script>
     const vcfData = `BEGIN:VCARD
 VERSION:4.0
+KIND:org
 FN:Artemisia bio
-ORG:Disidratato a freddo
+N:;;;;
+ORG:Artemisia bio
+X-ABShowAs:COMPANY
 TEL;TYPE=CELL,WORK:+393311475107
 EMAIL;TYPE=WORK:info@artemisiabio.com
 URL:https://artemisiabio.com
 ADR;TYPE=WORK:;;Via Mondovì 18;Beinette;CN;12081;Italy
+NOTE:Disidratato a freddo
 END:VCARD`;
 
     const dlBtn = document.getElementById("download-vcf");
     if (dlBtn) {
       dlBtn.addEventListener("click", function(e) {
         e.preventDefault();
-        const blob = new Blob([vcfData], { type: "text/vcard" });
+        // charset dichiarato: senza, «Caffè» e «Mondovì» arrivano in rubrica
+        // come «CaffÃ¨». La vCard 4.0 e' UTF-8 per specifica, ma chi legge
+        // il file scaricato guarda l'etichetta, non la specifica.
+        const blob = new Blob([vcfData], { type: "text/vcard;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "Artemisia-bio.vcf";

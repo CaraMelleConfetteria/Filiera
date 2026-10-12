@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lim Chocolate</title>
+  <title>Federico Dutto — Lim Chocolate</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
   <style>
@@ -334,19 +334,24 @@
   <script>
     const vcfData = `BEGIN:VCARD
 VERSION:4.0
-FN:Lim Chocolate
-ORG:Specialty Cacao macinato a pietra
+N:Dutto;Federico;;;
+FN:Federico Dutto
+ORG:Lim Chocolate
 TEL;TYPE=CELL,WORK:+393287092611
 EMAIL;TYPE=WORK:info@limchocolate.com
 URL:https://www.limchocolate.com/
 ADR;TYPE=WORK:;;Via Cuneo 177;San Sebastiano (Fossano);CN;12045;Italy
+NOTE:Specialty Cacao macinato a pietra
 END:VCARD`;
 
     const dlBtn = document.getElementById("download-vcf");
     if (dlBtn) {
       dlBtn.addEventListener("click", function(e) {
         e.preventDefault();
-        const blob = new Blob([vcfData], { type: "text/vcard" });
+        // charset dichiarato: senza, «Caffè» e «Mondovì» arrivano in rubrica
+        // come «CaffÃ¨». La vCard 4.0 e' UTF-8 per specifica, ma chi legge
+        // il file scaricato guarda l'etichetta, non la specifica.
+        const blob = new Blob([vcfData], { type: "text/vcard;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "Lim-Chocolate.vcf";

@@ -332,19 +332,26 @@
   <script>
     const vcfData = `BEGIN:VCARD
 VERSION:4.0
+KIND:org
 FN:Valverbe
-ORG:Tisane Bio
+N:;;;;
+ORG:Valverbe
+X-ABShowAs:COMPANY
 TEL;TYPE=WORK:+390175978276
 EMAIL;TYPE=WORK:valverbe@valverbe.it
 URL:https://valverbe.it
 ADR;TYPE=WORK:;;Via Prato 9;Melle;CN;12020;Italy
+NOTE:Tisane Bio
 END:VCARD`;
 
     const dlBtn = document.getElementById("download-vcf");
     if (dlBtn) {
       dlBtn.addEventListener("click", function(e) {
         e.preventDefault();
-        const blob = new Blob([vcfData], { type: "text/vcard" });
+        // charset dichiarato: senza, «Caffè» e «Mondovì» arrivano in rubrica
+        // come «CaffÃ¨». La vCard 4.0 e' UTF-8 per specifica, ma chi legge
+        // il file scaricato guarda l'etichetta, non la specifica.
+        const blob = new Blob([vcfData], { type: "text/vcard;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "Valverbe.vcf";

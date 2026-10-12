@@ -323,18 +323,25 @@
   <script>
     const vcfData = `BEGIN:VCARD
 VERSION:4.0
-FN:Progetto Tatawelo
-ORG:Caffè da filiera trasparente
+KIND:org
+FN:Progetto Caffè Tatawelo
+N:;;;;
+ORG:Progetto Caffè Tatawelo
+X-ABShowAs:COMPANY
 EMAIL;TYPE=WORK:info@tatawelo.it
 URL:https://tatawelo.it/
 ADR;TYPE=WORK:;;Via Cavour 7;Bra;CN;12042;Italy
+NOTE:Caffè da filiera trasparente
 END:VCARD`;
 
     const dlBtn = document.getElementById("download-vcf");
     if (dlBtn) {
       dlBtn.addEventListener("click", function(e) {
         e.preventDefault();
-        const blob = new Blob([vcfData], { type: "text/vcard" });
+        // charset dichiarato: senza, «Caffè» e «Mondovì» arrivano in rubrica
+        // come «CaffÃ¨». La vCard 4.0 e' UTF-8 per specifica, ma chi legge
+        // il file scaricato guarda l'etichetta, non la specifica.
+        const blob = new Blob([vcfData], { type: "text/vcard;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "Progetto-Tatawelo.vcf";
