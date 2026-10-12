@@ -2950,9 +2950,14 @@ salvaReport();
      Questi due comandi le dicono di smettere di guardare il sensore.
 
      QUELLO CHE COSTA: da qui in poi non avvisa più quando la carta finisce
-     DAVVERO. Si stampa nel vuoto e lo scontrino si rifà. Col rotolo
-     originale, che il sensore riconosce benissimo, conviene rimettere
-     false. */
+     DAVVERO. Si stampa nel vuoto e lo scontrino si rifà.
+
+     ⚠️ NON RIMETTERE false. Al banco si usa carta BLUE4EST, la termica senza
+     fenoli col fondo grigio-azzurro: l'immagine la fa uno strato fisico, non
+     il rivelatore chimico, e il sensore ottico non trova il riflesso che si
+     aspetta da una carta bianca. Con false la stampante torna a dire che il
+     rotolo è finito mentre è pieno. Vale la pena ridiscuterlo solo tornando
+     a un rotolo bianco normale. */
   var IGNORA_SENSORE_CARTA = true;
 
   function comandiSensore(push) {
@@ -4567,6 +4572,17 @@ salvaReport();
    * Contanti in quel momento vuol dire incassarla due volte.
    */
   function motivoBlocco() {
+    /* La cifra non è ancora sul lettore. Dura un attimo — il tempo di
+       chiedere al motore — ma in quell'attimo il tasto era VERDE, e in
+       quell'attimo si poteva registrare una vendita SumUp che il cliente
+       non aveva avuto modo di pagare. È il buco da cui è passato lo
+       scontrino da 7 € dell'1/10/2026: cliccato SumUp, verde per un
+       momento, registrato, e solo dopo «il POS non è collegato». */
+    if (metodoPagamentoSelezionato === 'SumUp' && stato === 'chiedendo') {
+      return 'Sto ancora parlando col lettore.\n\n' +
+             'Aspetta un momento: fra poco il Solo dice come e\' andata.';
+    }
+
     if (metodoPagamentoSelezionato === 'SumUp' && stato === 'lettore') {
       return 'Il cliente non ha ancora pagato ' + euro(importo) + ' sul lettore.\n\n' +
              'Aspetta la conferma, oppure annulla.';
