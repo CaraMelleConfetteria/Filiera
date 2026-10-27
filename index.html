@@ -1924,9 +1924,9 @@
         if (q) pezzi.push('<span class="fiera-quando">' + q + '</span>');
 
         var apertura = inCorso
-          ? (unGiorno ? T('fiera.oggi', 'Oggi sono in fiera ')
-                      : T('fiera.giorni', 'In questi giorni sono in fiera '))
-          : T('fiera.futuro', 'Sarò in fiera ');
+          ? (unGiorno ? T('fiera.oggi', 'Oggi sono in fiera a ')
+                      : T('fiera.giorni', 'In questi giorni sono in fiera a '))
+          : T('fiera.futuro', 'Sarò in fiera a ');
 
         var ics = new Blob([costruisciIcs(evento, inizio, fine, haOrario)],
                            { type: 'text/calendar;charset=utf-8' });
