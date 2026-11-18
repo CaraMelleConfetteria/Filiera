@@ -1430,12 +1430,22 @@
     }
     function loadStores() {
       return new Promise(function(resolve, reject) {
+        // Niente header:true: con due colonne vuote in fondo al Foglio le
+        // intestazioni "" sono doppie, e PapaParse 5.4 nel rinominarle si
+        // mangia la prima riga di dati (sparisce chi sta in riga 2). Le
+        // intestazioni le abbiniamo qui, a mano.
         Papa.parse(STORE_CONFIG.sheetCsvUrl, {
           download: true,
-          header: true,
+          header: false,
           skipEmptyLines: true,
           complete: function(res) {
-            var rows = res.data
+            var head = (res.data[0] || []).map(function(h) { return String(h).trim(); });
+            var rows = res.data.slice(1)
+              .map(function(cells) {
+                var r = {};
+                head.forEach(function(h, i) { if (h && !(h in r)) r[h] = cells[i]; });
+                return r;
+              })
               .map(function(r) {
                 return {
                   nome: (r['Nome negozio'] || '').trim(),
